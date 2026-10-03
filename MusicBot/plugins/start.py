@@ -13,7 +13,7 @@ HELP_MAIN = (
     "│\n"
     "│ Prefixes ➜ <code>/</code> <code>!</code> <code>.</code> <code>;</code>\n"
     "│ e.g. <code>;play</code>, <code>.skip</code>, <code>;approve</code>\n"
-    "╰─ 🎧 <i>made for smooth voice chat music</i>"
+    f"╰─ 💞 <i>{config.BOT_NAME}</i>"
 )
 
 HELP_PAGES = {
@@ -78,10 +78,12 @@ HELP_PAGES = {
         "│ <code>/stats</code> ➜ active chats (sudo)\n"
         "│ <code>/setcookies</code> ➜ fix YouTube blocks (sudo)\n"
         "│\n"
+        "│ <code>/id</code> ➜ chat & user id\n"
+        "│\n"
         "│ <b>sᴇᴛᴜᴘ:</b> make me admin with\n"
         "│ <i>Manage Video Chats, Invite Users,</i>\n"
         "│ <i>Delete Messages</i>\n"
-        "╰─ 🤖 my assistant joins automatically"
+        "╰─ 🔒 private bot for the Mad Family group"
     ),
 }
 
@@ -91,8 +93,8 @@ async def start_private(client: Client, message: Message):
     me = client.me
     text = (
         f"<b>ʜᴇʏ {message.from_user.mention} 👋</b>\n\n"
-        f"<blockquote>🎧 ɪ'ᴍ <b>{me.first_name}</b>\n"
-        "ᴀ ғᴀsᴛ & ʜɪ-ғɪ ᴍᴜsɪᴄ ᴘʟᴀʏᴇʀ ғᴏʀ ᴛᴇʟᴇɢʀᴀᴍ ᴠᴏɪᴄᴇ ᴄʜᴀᴛs</blockquote>\n\n"
+        f"<blockquote>🎧 ɪ'ᴍ <b>{config.BOT_NAME}</b>\n"
+        "ᴛʜᴇ ᴘʀɪᴠᴀᴛᴇ ᴍᴜsɪᴄ ᴘʟᴀʏᴇʀ ᴏғ ᴛʜᴇ <b>ᴍᴀᴅ ғᴀᴍɪʟʏ</b> ᴠᴏɪᴄᴇ ᴄʜᴀᴛ 💞</blockquote>\n\n"
         "╭─❰ ✨ <b>ғᴇᴀᴛᴜʀᴇs</b> ❱\n"
         "│ 🎵 YouTube songs, links & playlists\n"
         "│ 📺 Video streaming up to 4K\n"
@@ -101,7 +103,7 @@ async def start_private(client: Client, message: Message):
         "│ 🎛 Live player with progress bar\n"
         "│ 🛡 Admin mode & approved users\n"
         "╰─ 📜 Queue • loop • shuffle • seek • volume\n\n"
-        "<i>Add me to a group and send</i> <code>/play song name</code> 🚀"
+        "<i>Come to the Mad Family voice chat and send</i> <code>/play song name</code> 🚀"
     )
     markup = start_markup(me.username)
     if config.START_IMG:
@@ -115,7 +117,7 @@ async def start_private(client: Client, message: Message):
 @Client.on_message(command("start") & filters.group)
 async def start_group(client: Client, message: Message):
     await message.reply_text(
-        "🎶 <b>ɪ'ᴍ ᴀʟɪᴠᴇ & ʀᴇᴀᴅʏ!</b>\n"
+        f"🎶 <b>{config.BOT_NAME}</b>\n<i>ɪ'ᴍ ᴀʟɪᴠᴇ & ʀᴇᴀᴅʏ ᴛᴏ ᴘʟᴀʏ!</i>\n\n"
         "<code>/play song name</code> ➜ audio\n"
         "<code>/vplay song name</code> ➜ video\n"
         "<code>/help</code> ➜ all commands"

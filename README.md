@@ -1,8 +1,9 @@
-# 🎧 Music Bot — Telegram Voice Chat Player
+# 🥰🥳❤️ Mad Family ❤️🥰🥳 Music Bot
 
-A fast Telegram music bot that downloads tracks from YouTube and streams them into
-group voice chats in high quality. It runs on a **bot token** for commands and UI,
-and an **assistant account (Pyrogram string session)** that joins the voice chat.
+The private music bot of the **Mad Family** Telegram group. It downloads songs from
+YouTube and plays them in the group voice chat in high quality. It uses a **bot token**
+for commands and buttons, and an **assistant account** (Pyrogram string session) that
+joins the voice chat.
 
 ## ✨ Features
 
@@ -36,6 +37,7 @@ and an **assistant account (Pyrogram string session)** that joins the voice chat
 | `/np` | Now playing, with a progress bar |
 | `/remove <pos>` / `/clear` | Remove one upcoming track, or all of them |
 | `/ping` | Latency and uptime |
+| `/id` | Show the chat ID and your user ID |
 | `/approve` / `/unapprove` | Let a user control playback (admins; reply or `@user`) |
 | `/approved`, `/unapproveall` | List or clear approved users (admins) |
 | `/adminmode on\|off` | Only admins and approved users control playback (admins) |
@@ -74,8 +76,11 @@ view `/queue` and `/np`. Settings and approvals are saved in `data/db.json`.
    docker build -t music-bot .
    docker run -d --env-file .env --name music-bot music-bot
    ```
-6. Add the bot to your group as an admin with **Manage Video Chats**, **Invite Users**
-   and **Delete Messages**. Then send `/play song name`.
+6. Add the bot to the Mad Family group as an admin with **Manage Video Chats**,
+   **Invite Users** and **Delete Messages**. Then send `/play song name`.
+7. **Lock it to your group:** send `/id` in the group. Put that number in `.env` as
+   `ALLOWED_CHATS=-100...` and restart. In any other group, the bot will say it's
+   private and leave.
 
 ### Configuration (`.env`)
 
@@ -84,6 +89,9 @@ view `/queue` and `/np`. Settings and approvals are saved in `data/db.json`.
 | `API_ID`, `API_HASH` | — | Telegram API credentials (**required**) |
 | `BOT_TOKEN` | — | Bot token from BotFather (**required**) |
 | `STRING_SESSION` | — | Pyrogram string session of the assistant (**required**) |
+| `BOT_NAME` | `🥰🥳❤️ Mad Family ❤️🥰🥳 Music Bot` | Name shown in the bot's messages |
+| `ALLOWED_CHATS` | — | Group ID(s) the bot works in (get it with `/id`); other groups are left |
+| `GROUP_LINK` | — | Mad Family invite link, shown as a button on `/start` |
 | `OWNER_ID`, `SUDO_USERS` | — | User IDs with full control |
 | `AUDIO_QUALITY` | `high` | `high` (48 kHz, recommended), `studio` (96 kHz), `medium` or `low` |
 | `VIDEO_QUALITY` | `1080` | `4k`, `2k`, `1080`, `720`, `480` or `360` |

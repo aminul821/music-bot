@@ -8,6 +8,7 @@ import config
 from MusicBot.core import queue
 from MusicBot.core.clients import call
 from MusicBot.utils.filters import command
+from MusicBot.utils.formatters import esc
 
 BOOT_TIME = time.time()
 
@@ -30,7 +31,7 @@ async def ping_cmd(client: Client, message: Message):
     except Exception:
         call_ms = "n/a"
     await msg.edit_text(
-        "<b>🏓 Pong!</b>\n\n"
+        f"<b>🏓 ᴘᴏɴɢ!</b>  •  {config.BOT_NAME}\n\n"
         f"⚡ <b>Bot API:</b> <code>{api_ms:.0f} ms</code>\n"
         f"🎙 <b>Voice engine:</b> <code>{call_ms}</code>\n"
         f"🎧 <b>Active chats:</b> <code>{len(queue.active_chats())}</code>\n"
@@ -75,3 +76,14 @@ async def setcookies_cmd(client: Client, message: Message):
     except Exception:
         pass
     await message.reply_text("✅ <b>YouTube cookies saved.</b> Try <code>/play</code> again.")
+
+
+@Client.on_message(command("id", "chatid"))
+async def id_cmd(client: Client, message: Message):
+    lines = [f"💬 <b>ᴄʜᴀᴛ ɪᴅ</b> ➜ <code>{message.chat.id}</code>"]
+    if message.from_user:
+        lines.append(f"👤 <b>ʏᴏᴜʀ ɪᴅ</b> ➜ <code>{message.from_user.id}</code>")
+    if message.reply_to_message and message.reply_to_message.from_user:
+        u = message.reply_to_message.from_user
+        lines.append(f"↩️ <b>{esc(u.first_name or 'User', 30)}</b> ➜ <code>{u.id}</code>")
+    await message.reply_text("\n".join(lines))

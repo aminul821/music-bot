@@ -304,7 +304,7 @@ async def stop(chat_id: int, notify: bool = False) -> None:
     except (NotInCallError, Exception):
         pass
     if notify:
-        await _safe_send(chat_id, "✅ <b>ǫᴜᴇᴜᴇ ғɪɴɪsʜᴇᴅ</b>\n👋 <i>left the voice chat — send</i> <code>/play</code> <i>for more</i>")
+        await _safe_send(chat_id, f"✅ <b>ǫᴜᴇᴜᴇ ғɪɴɪsʜᴇᴅ</b>\n👋 <i>left the voice chat — send</i> <code>/play</code> <i>for more</i>\n\n💞 <i>{config.BOT_NAME}</i>")
 
 
 async def pause(chat_id: int) -> bool:
@@ -364,6 +364,7 @@ def _card(track: Track, state) -> str:
         lines.append(f"⏭ <b>ᴜᴘ ɴᴇxᴛ</b> ➜ <i>{esc(upcoming.title, 40)}</i>")
         if len(state.tracks) > 2:
             lines.append(f"📜 <b>ɪɴ ǫᴜᴇᴜᴇ</b> ➜ <code>{len(state.tracks) - 1}</code> tracks")
+    lines += ["", f"💞 <i>{config.BOT_NAME}</i>"]
     return "\n".join(lines)
 
 

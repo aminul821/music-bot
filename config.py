@@ -21,6 +21,13 @@ BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 # Pyrogram string session of the assistant account that joins voice chats.
 STRING_SESSION = os.getenv("STRING_SESSION", "")
 
+# --- Branding / private group ---------------------------------------------
+BOT_NAME = os.getenv("BOT_NAME", "🥰🥳❤️ Mad Family ❤️🥰🥳 Music Bot")
+# Group id(s) the bot is allowed in (send /id in the group to get it). Empty = any group.
+ALLOWED_CHATS = set(_int_list(os.getenv("ALLOWED_CHATS", "")))
+# Invite link of your group, shown on /start.
+GROUP_LINK = os.getenv("GROUP_LINK", "")
+
 # --- Optional ------------------------------------------------------------
 OWNER_ID = int(os.getenv("OWNER_ID", "0"))
 SUDO_USERS = set(_int_list(os.getenv("SUDO_USERS", ""))) | ({OWNER_ID} if OWNER_ID else set())

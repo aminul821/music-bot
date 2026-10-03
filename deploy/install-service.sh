@@ -22,7 +22,7 @@ SERVICE_PATH="$USER_HOME/.deno/bin:$APP_DIR/venv/bin:/usr/local/bin:/usr/bin:/bi
 
 sudo tee "$SERVICE" > /dev/null <<UNIT
 [Unit]
-Description=Telegram Music Bot
+Description=Mad Family Music Bot
 After=network-online.target
 Wants=network-online.target
 
@@ -43,7 +43,7 @@ UNIT
 sudo systemctl daemon-reload
 sudo systemctl enable --now musicbot
 echo
-echo "✅ Music bot is now running 24/7 as a service."
+echo "✅ Mad Family Music Bot is now running 24/7 as a service."
 echo "   Logs:     sudo journalctl -u musicbot -f"
 echo "   Restart:  sudo systemctl restart musicbot"
 echo "   Stop:     sudo systemctl stop musicbot"

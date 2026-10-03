@@ -33,10 +33,12 @@ def close_markup() -> InlineKeyboardMarkup:
 
 
 def start_markup(bot_username: str) -> InlineKeyboardMarkup:
-    rows = [
-        [Btn("➕ ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ ➕", url=f"https://t.me/{bot_username}?startgroup=true&admin=manage_video_chats+invite_users+delete_messages")],
-        [Btn("📖 ʜᴇʟᴘ & ᴄᴏᴍᴍᴀɴᴅs", callback_data="help:main")],
-    ]
+    rows = []
+    if config.GROUP_LINK:
+        rows.append([Btn("💞 ᴊᴏɪɴ ᴍᴀᴅ ғᴀᴍɪʟʏ 💞", url=_link(config.GROUP_LINK))])
+    elif not config.ALLOWED_CHATS:
+        rows.append([Btn("➕ ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ ➕", url=f"https://t.me/{bot_username}?startgroup=true&admin=manage_video_chats+invite_users+delete_messages")])
+    rows.append([Btn("📖 ʜᴇʟᴘ & ᴄᴏᴍᴍᴀɴᴅs", callback_data="help:main")])
     extra = []
     if config.SUPPORT_CHAT:
         extra.append(Btn("💬 sᴜᴘᴘᴏʀᴛ", url=_link(config.SUPPORT_CHAT)))

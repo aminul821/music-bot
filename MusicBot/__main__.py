@@ -70,10 +70,14 @@ async def main() -> None:
         await bot.set_bot_commands(COMMANDS)
     except Exception as e:
         LOGGER.warning("Couldn't set bot commands: %s", e)
+    if config.ALLOWED_CHATS:
+        LOGGER.info("Locked to group(s): %s", ", ".join(map(str, config.ALLOWED_CHATS)))
+    else:
+        LOGGER.warning("ALLOWED_CHATS is empty: the bot works in any group. Send /id in your group and set it.")
     LOGGER.info("Bot @%s started with assistant @%s", bot.me.username, assistant.me.username or assistant.me.id)
     if config.OWNER_ID:
         try:
-            await bot.send_message(config.OWNER_ID, "✅ <b>Music bot is online.</b>")
+            await bot.send_message(config.OWNER_ID, f"✅ <b>{config.BOT_NAME}</b> is online! 🎶")
         except Exception:
             pass
     await idle()
