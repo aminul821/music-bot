@@ -40,6 +40,7 @@ joins the voice chat.
 | `/remove <pos>` / `/clear` | Remove one upcoming track, or all of them |
 | `/ping` | Latency and uptime |
 | `/id` | Show the chat ID and your user ID |
+| `/allowchat`, `/disallowchat` | Unlock or remove the current group (owner/sudo) |
 | `/approve` / `/unapprove` | Let a user control playback (admins; reply or `@user`) |
 | `/approved`, `/unapproveall` | List or clear approved users (admins) |
 | `/adminmode on\|off` | Only admins and approved users control playback (admins) |
@@ -82,8 +83,9 @@ view `/queue` and `/np`. Settings and approvals are saved in `data/db.json`.
    **Invite Users**, **Delete Messages** and **Add New Admins**. The last one lets it
    promote the assistant so the assistant can start the voice chat. Then send `/play song name`.
 7. **Lock it to your group:** send `/id` in the group. Put that number in `.env` as
-   `ALLOWED_CHATS=-100...` and restart. In any other group, the bot will say it's
-   private and leave.
+   `ALLOWED_CHATS=-100...` and restart. If someone else adds the bot to another group,
+   it says it's only made for Mad Family and leaves. If the **owner** (`OWNER_ID`) or a
+   sudo user adds it, that group is unlocked automatically.
 
 ### Configuration (`.env`)
 

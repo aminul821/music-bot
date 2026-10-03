@@ -15,10 +15,10 @@ from pyrogram.errors import (
 )
 from pyrogram.raw.functions.channels import GetFullChannel
 from pyrogram.raw.functions.messages import GetFullChat
+from pyrogram.raw.functions.phone import LeaveGroupCall
 from pyrogram.raw.types import InputChannel, InputPeerChannel, InputPeerChat
 from pyrogram.types import ChatPrivileges, Message
 from pytgcalls import filters as fl
-from pytgcalls.exceptions import NotInCallError
 from pytgcalls.types import AudioQuality, ChatUpdate, MediaStream, StreamEnded, VideoQuality
 
 import config
@@ -177,20 +177,42 @@ async def promote_assistant(chat_id: int) -> bool:
         return False
 
 
+async def _group_call(chat_id: int):
+    """The chat's active InputGroupCall (None if the voice chat is off). Raises on lookup errors."""
+    peer = await assistant.resolve_peer(chat_id)
+    if isinstance(peer, InputPeerChannel):
+        full = await assistant.invoke(
+            GetFullChannel(channel=InputChannel(channel_id=peer.channel_id, access_hash=peer.access_hash))
+        )
+    elif isinstance(peer, InputPeerChat):
+        full = await assistant.invoke(GetFullChat(chat_id=peer.chat_id))
+    else:
+        return None
+    return full.full_chat.call
+
+
 async def _vc_is_off(chat_id: int) -> bool:
     try:
-        peer = await assistant.resolve_peer(chat_id)
-        if isinstance(peer, InputPeerChannel):
-            full = await assistant.invoke(
-                GetFullChannel(channel=InputChannel(channel_id=peer.channel_id, access_hash=peer.access_hash))
-            )
-        elif isinstance(peer, InputPeerChat):
-            full = await assistant.invoke(GetFullChat(chat_id=peer.chat_id))
-        else:
-            return False
-        return full.full_chat.call is None
+        return await _group_call(chat_id) is None
     except Exception:
         return False
+
+
+async def _leave_vc(chat_id: int) -> None:
+    """Leave the voice chat for sure: through pytgcalls, then directly via Telegram as a fallback."""
+    try:
+        await call.leave_call(chat_id)
+        LOGGER.info("Left voice chat in %s", chat_id)
+        return
+    except Exception as e:
+        LOGGER.info("leave_call in %s: %s — trying direct leave", chat_id, type(e).__name__)
+    try:
+        group_call = await _group_call(chat_id)
+        if group_call is not None:
+            await assistant.invoke(LeaveGroupCall(call=group_call, source=0))
+            LOGGER.info("Left voice chat in %s (direct)", chat_id)
+    except Exception as e:
+        LOGGER.debug("Direct leave in %s failed: %s", chat_id, e)
 
 
 def _needs_rights(error: Exception) -> bool:
@@ -279,6 +301,20 @@ async def _check_can_speak(chat_id: int) -> None:
             return
 
 
+async def _end_watchdog(chat_id: int, track: Track) -> None:
+    """Backup for a missed stream-end event: advance once the track is clearly over."""
+    started = track.started_at  # a seek/loop restart makes a new watchdog; this one retires
+    while True:
+        await asyncio.sleep(15)
+        state = queue.peek(chat_id)
+        if not state or state.current is not track or track.started_at != started:
+            return
+        if not state.paused and track.elapsed() > track.duration + 20:
+            LOGGER.warning("No stream-end event for %r in %s, advancing", track.title, chat_id)
+            await on_stream_end(chat_id, expected=track)
+            return
+
+
 async def _play_current(chat_id: int, offset: int = 0, announce: bool = True) -> None:
     state = queue.get(chat_id)
     track = state.current
@@ -286,6 +322,8 @@ async def _play_current(chat_id: int, offset: int = 0, announce: bool = True) ->
     LOGGER.info("Playing %r in %s from %s", track.title, chat_id, path)
     await _join_call(chat_id, _stream(path, track.video, offset), lambda: _stream(path, track.video, offset))
     track.mark_started(offset)
+    if track.duration > 0:
+        asyncio.create_task(_end_watchdog(chat_id, track))
     try:
         await call.unmute(chat_id)
     except Exception:
@@ -354,10 +392,15 @@ async def skip(chat_id: int) -> Track | None:
         return state.current
 
 
-async def on_stream_end(chat_id: int) -> None:
-    state = queue.get(chat_id)
+async def on_stream_end(chat_id: int, expected: Track | None = None) -> None:
+    state = queue.peek(chat_id)
+    if state is None:
+        # Nothing queued but the stream ended: make sure we're not left sitting in the call.
+        if chat_id in _in_call:
+            await stop(chat_id, notify=False)
+        return
     async with state.lock:
-        if not state.tracks:
+        if not state.tracks or (expected is not None and state.current is not expected):
             return
         cur = state.current
         played = cur.elapsed() - cur.offset
@@ -384,10 +427,7 @@ async def stop(chat_id: int, notify: bool = False) -> None:
     old = _np_messages.pop(chat_id, None)
     if old:
         await _safe_delete(old)
-    try:
-        await call.leave_call(chat_id)
-    except (NotInCallError, Exception):
-        pass
+    await _leave_vc(chat_id)
     if notify:
         await _safe_send(chat_id, f"✅ <b>ǫᴜᴇᴜᴇ ғɪɴɪsʜᴇᴅ</b>\n👋 <i>left the voice chat — send</i> <code>/play</code> <i>for more</i>\n\n💞 <i>{config.BOT_NAME}</i>")
 

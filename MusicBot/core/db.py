@@ -1,4 +1,6 @@
 """Tiny JSON store for per-chat settings and approved users (survives restarts)."""
+from __future__ import annotations
+
 import json
 import os
 import threading
@@ -50,6 +52,30 @@ def get(chat_id: int, key: str):
 def set(chat_id: int, key: str, value) -> None:  # noqa: A001
     _chat(chat_id)[key] = value
     _save()
+
+
+# ---------------------------------------------------------------- extra allowed groups
+
+
+def allowed_chats() -> set[int]:
+    """Groups the owner/sudo added the bot to (on top of ALLOWED_CHATS)."""
+    return {int(c) for c in _data.get("_allowed_chats", [])}
+
+
+def allow_chat(chat_id: int) -> None:
+    chats = _data.setdefault("_allowed_chats", [])
+    if chat_id not in chats:
+        chats.append(chat_id)
+        _save()
+
+
+def disallow_chat(chat_id: int) -> bool:
+    chats = _data.get("_allowed_chats", [])
+    if chat_id not in chats:
+        return False
+    chats.remove(chat_id)
+    _save()
+    return True
 
 
 # ---------------------------------------------------------------- approved users
