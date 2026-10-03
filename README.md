@@ -49,9 +49,10 @@ Commands work with the `/`, `!` and `.` prefixes.
    python generate_session.py
    ```
 4. Copy `.env.example` to `.env` and fill in the values.
-5. Install **ffmpeg** and run the bot:
+5. Install **ffmpeg** and **Deno** (YouTube needs a JS runtime), then run the bot:
    ```bash
-   sudo apt install ffmpeg
+   sudo apt install -y ffmpeg unzip
+   curl -fsSL https://deno.land/install.sh | sh   # then restart your shell
    python -m MusicBot
    ```
    Or use Docker:
@@ -76,12 +77,32 @@ Commands work with the `/`, `!` and `.` prefixes.
 | `QUEUE_LIMIT` | `50` | Maximum tracks in one queue |
 | `ADMIN_ONLY` | `true` | Only admins can control playback |
 | `COOKIES_FILE` | — | YouTube `cookies.txt` (helps if YouTube blocks your server) |
+| `YT_CLIENTS` | — | yt-dlp player clients to try first, e.g. `tv_simply,web_safari` |
 | `SUPPORT_CHAT`, `UPDATES_CHANNEL`, `START_IMG` | — | Optional links and image for `/start` |
 
 > **Tip:** `studio` audio and 4K video use more CPU and bandwidth. On a small VPS,
 > use `AUDIO_QUALITY=high` and `VIDEO_QUALITY=720`.
 
 > ⚠️ Never share your `STRING_SESSION`. It gives full access to the assistant account.
+
+## 🛠 Troubleshooting
+
+**`ERROR: unable to download video data: HTTP Error 403: Forbidden`**
+
+YouTube is refusing downloads from your server. This is common on cloud/VPS IPs
+(Azure, AWS, GCP…). Try these in order:
+
+1. **Install Deno** (most common fix):
+   `curl -fsSL https://deno.land/install.sh | sh`, then check that `deno --version` works.
+2. **Update yt-dlp**: `pip install -U "yt-dlp[default]"`. YouTube changes often.
+3. **Use cookies**: in a browser that's logged into YouTube (use a spare account),
+   export `cookies.txt` with the *"Get cookies.txt LOCALLY"* extension. Upload it to
+   the server and set `COOKIES_FILE=cookies.txt`.
+4. **PO token provider** (for heavily blocked IPs): run
+   `docker run -d -p 4416:4416 brainicism/bgutil-ytdlp-pot-provider`
+   and `pip install bgutil-ytdlp-pot-provider`.
+
+The bot already retries blocked downloads with several YouTube clients automatically.
 
 ## 🧱 Project structure
 

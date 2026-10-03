@@ -40,6 +40,8 @@ ADMIN_ONLY = _bool(os.getenv("ADMIN_ONLY", "true"))
 
 # Path to a Netscape-format cookies.txt for yt-dlp (helps with YouTube rate limits).
 COOKIES_FILE = os.getenv("COOKIES_FILE", "")
+# Optional comma-separated yt-dlp YouTube player clients to try first, e.g. "tv_simply,web_safari".
+YT_CLIENTS = [c.strip() for c in os.getenv("YT_CLIENTS", "").split(",") if c.strip()]
 DOWNLOAD_DIR = os.getenv("DOWNLOAD_DIR", "downloads")
 
 SUPPORT_CHAT = os.getenv("SUPPORT_CHAT", "")

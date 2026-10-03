@@ -1,6 +1,7 @@
 """YouTube search & download helpers built on yt-dlp."""
 import asyncio
 import glob
+import logging
 import os
 import re
 
@@ -9,6 +10,20 @@ from yt_dlp import YoutubeDL
 import config
 
 YT_LINK = re.compile(r"(https?://)?(www\.|m\.|music\.)?(youtube\.com|youtu\.be)/\S+")
+
+LOGGER = logging.getLogger("MusicBot.youtube")
+
+# Player clients tried in order when YouTube refuses a download (HTTP 403 etc).
+# None = yt-dlp's own default choice.
+FALLBACK_CLIENTS: list[list[str] | None] = [
+    None,
+    ["tv_simply", "web_safari"],
+    ["android_vr"],
+    ["mweb"],
+    ["tv", "web_embedded"],
+]
+if config.YT_CLIENTS:
+    FALLBACK_CLIENTS.insert(0, config.YT_CLIENTS)
 
 VIDEO_HEIGHTS = {"4k": 2160, "2k": 1440, "1080": 1080, "720": 720, "480": 480, "360": 360}
 
@@ -19,7 +34,7 @@ class YouTubeError(Exception):
     pass
 
 
-def _base_opts() -> dict:
+def _base_opts(clients: list[str] | None = None) -> dict:
     opts = {
         "quiet": True,
         "no_warnings": True,
@@ -29,7 +44,14 @@ def _base_opts() -> dict:
         "concurrent_fragment_downloads": 8,
         "retries": 5,
         "fragment_retries": 5,
+        # Small HTTP chunks avoid YouTube throttling/403s on long downloads.
+        "http_chunk_size": 10 * 1024 * 1024,
+        # YouTube needs a JS runtime to unlock most formats (deno is preferred).
+        "js_runtimes": {"deno": {}, "node": {}, "bun": {}},
+        "remote_components": ["ejs:github"],
     }
+    if clients:
+        opts["extractor_args"] = {"youtube": {"player_client": clients}}
     if config.COOKIES_FILE and os.path.isfile(config.COOKIES_FILE):
         opts["cookiefile"] = config.COOKIES_FILE
     return opts
@@ -114,29 +136,48 @@ def _download(link: str, vidid: str, video: bool) -> str:
     if cached:
         return cached[0]
 
-    opts = _base_opts()
-    opts.update(
-        format=fmt,
-        outtmpl=os.path.join(config.DOWNLOAD_DIR, f"{name}.%(ext)s"),
-        merge_output_format="mkv",
-    )
-    with YoutubeDL(opts) as ydl:
-        info = ydl.extract_info(link, download=True)
-        path = info.get("requested_downloads", [{}])[0].get("filepath") or ydl.prepare_filename(info)
-    if not os.path.isfile(path):
-        raise YouTubeError("Download failed.")
-    return path
+    last_error: Exception | None = None
+    for clients in FALLBACK_CLIENTS:
+        opts = _base_opts(clients)
+        opts.update(
+            format=fmt,
+            outtmpl=os.path.join(config.DOWNLOAD_DIR, f"{name}.%(ext)s"),
+            merge_output_format="mkv",
+        )
+        try:
+            with YoutubeDL(opts) as ydl:
+                info = ydl.extract_info(link, download=True)
+                path = info.get("requested_downloads", [{}])[0].get("filepath") or ydl.prepare_filename(info)
+            if os.path.isfile(path):
+                return path
+            last_error = YouTubeError("Download failed.")
+        except Exception as e:
+            last_error = e
+            LOGGER.warning("Download of %s failed with clients=%s: %s", vidid, clients or "default", str(e).splitlines()[0])
+        for leftover in glob.glob(os.path.join(config.DOWNLOAD_DIR, f"{name}.*")):
+            try:
+                os.remove(leftover)
+            except OSError:
+                pass
+    raise YouTubeError(
+        "YouTube blocked the download (HTTP 403). Install Deno, update yt-dlp, "
+        "or set COOKIES_FILE — see README › Troubleshooting."
+    ) from last_error
 
 
 def _live_url(link: str, video: bool) -> str:
-    opts = _base_opts()
-    opts["format"] = f"best[height<={_video_height()}]/best" if video else "bestaudio/best"
-    with YoutubeDL(opts) as ydl:
-        info = ydl.extract_info(link, download=False)
-    url = info.get("url")
-    if not url:
-        raise YouTubeError("Could not get live stream URL.")
-    return url
+    last_error: Exception | None = None
+    for clients in FALLBACK_CLIENTS:
+        opts = _base_opts(clients)
+        opts["format"] = f"best[height<={_video_height()}]/best" if video else "bestaudio/best"
+        try:
+            with YoutubeDL(opts) as ydl:
+                info = ydl.extract_info(link, download=False)
+            if info.get("url"):
+                return info["url"]
+        except Exception as e:
+            last_error = e
+    raise YouTubeError("Could not get live stream URL.") from last_error
 
 
 async def download(link: str, vidid: str, video: bool = False, live: bool = False) -> str:

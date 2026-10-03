@@ -1,5 +1,6 @@
 import glob
 import os
+import shutil
 
 from pyrogram import idle
 from pyrogram.types import BotCommand
@@ -37,6 +38,13 @@ def _clean_downloads() -> None:
 
 async def main() -> None:
     _clean_downloads()
+    if not any(shutil.which(rt) for rt in ("deno", "node", "bun")):
+        LOGGER.warning(
+            "No JavaScript runtime found: YouTube downloads may fail with HTTP 403. "
+            "Install Deno: curl -fsSL https://deno.land/install.sh | sh"
+        )
+    if not shutil.which("ffmpeg"):
+        LOGGER.error("ffmpeg is not installed: sudo apt install ffmpeg")
     await bot.start()
     await call.start()  # also starts the assistant client
     try:
