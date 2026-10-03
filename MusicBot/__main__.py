@@ -47,6 +47,12 @@ async def main() -> None:
         LOGGER.error("ffmpeg is not installed: sudo apt install ffmpeg")
     await bot.start()
     await call.start()  # also starts the assistant client
+    # In-memory sessions start with an empty peer cache: load the assistant's chats.
+    try:
+        async for _ in assistant.get_dialogs():
+            pass
+    except Exception as e:
+        LOGGER.warning("Couldn't load assistant dialogs: %s", e)
     try:
         await bot.set_bot_commands(COMMANDS)
     except Exception as e:

@@ -4,10 +4,12 @@ import logging
 
 from pyrogram.enums import ChatMemberStatus
 from pyrogram.errors import (
+    ChannelPrivate,
     ChatAdminRequired,
+    InviteHashExpired,
     InviteRequestSent,
     UserAlreadyParticipant,
-    UserNotParticipant,
+    UserBannedInChannel,
 )
 from pyrogram.types import Message
 from pytgcalls import filters as fl
@@ -54,53 +56,88 @@ class PlayerError(Exception):
 # ---------------------------------------------------------------- assistant
 
 
-async def ensure_assistant(chat_id: int) -> None:
-    """Make sure the assistant account is a member of the chat."""
-    if chat_id in _joined:
-        return
+async def _assistant_knows(chat_id: int) -> bool:
+    """True if the assistant has the chat cached and is a member of it."""
+    try:
+        member = await assistant.get_chat_member(chat_id, "me")
+    except Exception:  # UserNotParticipant, PeerIdInvalid, ChannelInvalid...
+        return False
+    return member.status not in (ChatMemberStatus.BANNED, ChatMemberStatus.LEFT)
+
+
+async def _invite_link(chat_id: int) -> str:
+    chat = await bot.get_chat(chat_id)
+    if chat.username:
+        return chat.username
+    if chat.invite_link:
+        return chat.invite_link
+    try:
+        # A separate link, so the group's primary invite link is never revoked.
+        link = await bot.create_chat_invite_link(chat_id, name="Music assistant")
+        return link.invite_link
+    except ChatAdminRequired:
+        raise PlayerError(
+            "⚠️ I need to be an admin with <b>Invite Users</b> permission "
+            "to add my assistant to this chat."
+        )
+
+
+async def _unban_assistant(chat_id: int) -> bool:
     me = assistant.me
     try:
-        member = await bot.get_chat_member(chat_id, me.id)
-        if member.status == ChatMemberStatus.BANNED:
-            raise PlayerError(
-                f"🚫 Assistant {me.mention} is banned here. Unban it and try again."
-            )
-        if member.status != ChatMemberStatus.LEFT:
-            _joined.add(chat_id)
-            return
-    except UserNotParticipant:
-        pass
+        # Bots can only reach the assistant by username (they've never "met" it by id).
+        await bot.unban_chat_member(chat_id, me.username or me.id)
+        return True
+    except Exception:
+        return False
 
-    chat = await bot.get_chat(chat_id)
-    try:
-        if chat.username:
-            await assistant.join_chat(chat.username)
-        else:
-            try:
-                link = await bot.export_chat_invite_link(chat_id)
-            except ChatAdminRequired:
-                raise PlayerError(
-                    "⚠️ I need to be an admin with <b>Invite Users</b> permission "
-                    "to add my assistant to this chat."
-                )
-            await assistant.join_chat(link)
-    except UserAlreadyParticipant:
-        pass
-    except InviteRequestSent:
+
+async def ensure_assistant(chat_id: int) -> None:
+    """Make sure the assistant account is in the chat and knows its peer."""
+    if chat_id in _joined:
+        return
+    if await _assistant_knows(chat_id):
+        _joined.add(chat_id)
+        return
+
+    me = assistant.me
+    target = await _invite_link(chat_id)
+    for attempt in range(2):
         try:
-            await bot.approve_chat_join_request(chat_id, me.id)
-        except Exception:
-            raise PlayerError(f"⏳ Approve the join request of {me.mention} and try again.")
-    except PlayerError:
-        raise
-    except Exception as e:
-        raise PlayerError(f"❌ Assistant couldn't join this chat: <code>{esc(str(e), 200)}</code>")
+            await assistant.join_chat(target)
+            break
+        except UserAlreadyParticipant:
+            break
+        except InviteRequestSent:
+            try:
+                await bot.approve_chat_join_request(chat_id, me.username or me.id)
+            except Exception:
+                raise PlayerError(f"⏳ Approve the join request of {me.mention} and try again.")
+            break
+        except (UserBannedInChannel, ChannelPrivate, InviteHashExpired) as e:
+            if attempt == 0 and await _unban_assistant(chat_id):
+                continue
+            raise PlayerError(
+                f"🚫 Assistant {me.mention} can't join (it may be banned). "
+                f"Unban it and try again.\n<code>{type(e).__name__}</code>"
+            )
+        except Exception as e:
+            raise PlayerError(f"❌ Assistant couldn't join this chat: <code>{esc(str(e), 200)}</code>")
 
-    await asyncio.sleep(1)
+    # Resolving through the link/username stores the chat's access hash for the assistant.
     try:
-        await assistant.get_chat(chat_id)  # cache the peer for pytgcalls
+        await assistant.get_chat(target)
     except Exception:
         pass
+    if not await _assistant_knows(chat_id):
+        await asyncio.sleep(2)
+        async for _ in assistant.get_dialogs(limit=100):
+            pass
+        if not await _assistant_knows(chat_id):
+            raise PlayerError(
+                f"❌ Assistant {me.mention} couldn't access this chat. "
+                "Try again in a few seconds, or add it to the group manually."
+            )
     _joined.add(chat_id)
 
 
