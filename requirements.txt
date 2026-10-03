@@ -1,0 +1,5 @@
+pyrofork>=2.3.69
+tgcrypto
+py-tgcalls>=3.0.0
+yt-dlp>=2026.8.19
+python-dotenv
