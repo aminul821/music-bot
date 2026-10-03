@@ -30,8 +30,8 @@ DURATION_LIMIT = int(os.getenv("DURATION_LIMIT", "180"))
 # Max tracks waiting in one chat's queue.
 QUEUE_LIMIT = int(os.getenv("QUEUE_LIMIT", "50"))
 
-# Audio quality: studio (96 kHz stereo), high (48 kHz stereo), medium, low.
-AUDIO_QUALITY = os.getenv("AUDIO_QUALITY", "studio").lower()
+# Audio quality: high (48 kHz stereo, Telegram's native rate — best), studio (96 kHz), medium, low.
+AUDIO_QUALITY = os.getenv("AUDIO_QUALITY", "high").lower()
 # Video quality for /vplay: 4k, 2k, 1080, 720, 480, 360.
 VIDEO_QUALITY = os.getenv("VIDEO_QUALITY", "1080").lower()
 
@@ -44,7 +44,7 @@ COOKIES_FILE = os.getenv("COOKIES_FILE", "") or ("cookies.txt" if os.path.isfile
 YT_PROXY = os.getenv("YT_PROXY", "")
 # Optional comma-separated yt-dlp YouTube player clients to try first, e.g. "tv_simply,web_safari".
 YT_CLIENTS = [c.strip() for c in os.getenv("YT_CLIENTS", "").split(",") if c.strip()]
-DOWNLOAD_DIR = os.getenv("DOWNLOAD_DIR", "downloads")
+DOWNLOAD_DIR = os.path.abspath(os.getenv("DOWNLOAD_DIR", "downloads"))
 
 SUPPORT_CHAT = os.getenv("SUPPORT_CHAT", "")
 UPDATES_CHANNEL = os.getenv("UPDATES_CHANNEL", "")

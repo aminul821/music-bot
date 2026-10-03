@@ -30,7 +30,7 @@ AUDIO_QUALITY = {
     "high": AudioQuality.HIGH,
     "medium": AudioQuality.MEDIUM,
     "low": AudioQuality.LOW,
-}.get(config.AUDIO_QUALITY, AudioQuality.STUDIO)
+}.get(config.AUDIO_QUALITY, AudioQuality.HIGH)
 
 VIDEO_QUALITY = {
     "4k": VideoQuality.UHD_4K,
@@ -171,12 +171,37 @@ def _stream(path: str, video: bool, offset: int = 0) -> MediaStream:
     )
 
 
+async def _check_can_speak(chat_id: int) -> None:
+    """Warn the chat if the assistant is in the call but muted by an admin."""
+    await asyncio.sleep(4)
+    try:
+        participants = await call.get_participants(chat_id) or []
+    except Exception:
+        return
+    me = assistant.me
+    for p in participants:
+        if p.user_id == me.id and p.muted_by_admin:
+            await _safe_send(
+                chat_id,
+                f"🔇 <b>My assistant {me.mention} is muted in the voice chat</b>, so nobody can hear the music.\n"
+                "Unmute it in the voice chat (tap its name → <i>Allow to speak</i>), "
+                "or make it an admin with <b>Manage Video Chats</b>.",
+            )
+            return
+
+
 async def _play_current(chat_id: int, offset: int = 0, announce: bool = True) -> None:
     state = queue.get(chat_id)
     track = state.current
     path = await _prepare(track)
+    LOGGER.info("Playing %r in %s from %s", track.title, chat_id, path)
     await call.play(chat_id, _stream(path, track.video, offset))
     track.mark_started(offset)
+    try:
+        await call.unmute(chat_id)
+    except Exception:
+        pass
+    asyncio.create_task(_check_can_speak(chat_id))
     if state.volume != 100:
         try:
             await call.change_volume_call(chat_id, state.volume)
@@ -244,6 +269,18 @@ async def on_stream_end(chat_id: int) -> None:
     async with state.lock:
         if not state.tracks:
             return
+        cur = state.current
+        played = cur.elapsed() - cur.offset
+        LOGGER.info("Stream ended in %s after %ss: %r", chat_id, played, cur.title)
+        if played < 5 and cur.duration > 15:
+            # ffmpeg exited right away: the file couldn't be read/decoded.
+            LOGGER.warning("Playback of %s ended immediately (path=%s)", cur.title, cur.path)
+            await _safe_send(
+                chat_id,
+                f"⚠️ <b>{esc(cur.title)}</b> stopped right after starting — the audio file couldn't be "
+                "decoded. Check that <code>ffmpeg</code> is installed on the server.",
+            )
+            state.loop = 0
         if state.loop > 0:
             state.loop -= 1
         else:

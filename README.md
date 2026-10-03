@@ -6,7 +6,7 @@ and an **assistant account (Pyrogram string session)** that joins the voice chat
 
 ## ✨ Features
 
-- 🎧 **Studio audio** at up to 96 kHz stereo (configurable)
+- 🎧 **Hi-fi audio** at 48 kHz stereo, Telegram's native voice chat rate (configurable)
 - 📺 **Video streaming** up to 4K with `/vplay`
 - ⚡ **Smooth playback**: tracks are fully downloaded before they play, and the next
   track downloads in the background so there's no gap between songs
@@ -72,7 +72,7 @@ Commands work with the `/`, `!` and `.` prefixes.
 | `BOT_TOKEN` | — | Bot token from BotFather (**required**) |
 | `STRING_SESSION` | — | Pyrogram string session of the assistant (**required**) |
 | `OWNER_ID`, `SUDO_USERS` | — | User IDs with full control |
-| `AUDIO_QUALITY` | `studio` | `studio`, `high`, `medium` or `low` |
+| `AUDIO_QUALITY` | `high` | `high` (48 kHz, recommended), `studio` (96 kHz), `medium` or `low` |
 | `VIDEO_QUALITY` | `1080` | `4k`, `2k`, `1080`, `720`, `480` or `360` |
 | `DURATION_LIMIT` | `180` | Longest allowed track, in minutes (`0` = no limit) |
 | `QUEUE_LIMIT` | `50` | Maximum tracks in one queue |
@@ -82,8 +82,7 @@ Commands work with the `/`, `!` and `.` prefixes.
 | `YT_CLIENTS` | — | yt-dlp player clients to try first, e.g. `tv_simply,web_safari` |
 | `SUPPORT_CHAT`, `UPDATES_CHANNEL`, `START_IMG` | — | Optional links and image for `/start` |
 
-> **Tip:** `studio` audio and 4K video use more CPU and bandwidth. On a small VPS,
-> use `AUDIO_QUALITY=high` and `VIDEO_QUALITY=720`.
+> **Tip:** 4K video uses a lot of CPU and bandwidth. On a small VPS, use `VIDEO_QUALITY=720`.
 
 > ⚠️ Never share your `STRING_SESSION`. It gives full access to the assistant account.
 
@@ -110,6 +109,15 @@ YouTube blocks most cloud/VPS IP addresses (Azure, AWS, GCP…). You need one of
 
 Also make sure **Deno** is installed (`deno --version`) and yt-dlp is up to date:
 `pip install -U "yt-dlp[default]"`.
+
+**The assistant joins the voice chat but there's no sound**
+
+- Check that the assistant isn't muted in the voice chat. Tap its name and choose
+  *Allow to speak*, or make it an admin with **Manage Video Chats**. The bot posts a
+  warning when it detects this.
+- Check that `ffmpeg -version` works on the server.
+- Keep `AUDIO_QUALITY=high`. Telegram voice chats run at 48 kHz.
+- Watch the console. Each track logs `Playing ...` and `Stream ended ... after Ns`.
 
 ## 🧱 Project structure
 

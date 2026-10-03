@@ -21,7 +21,7 @@ HELP_PAGES = {
         "• Reply <code>/play</code> to an audio/voice file — play it\n"
         "• Reply <code>/vplay</code> to a video file — play it\n"
         "• <code>/playforce</code> <i>query</i> — skip current & play now (admins)\n\n"
-        "<i>Audio is streamed in studio quality (up to 96 kHz stereo); "
+        "<i>Audio is streamed in hi-fi quality (48 kHz stereo); "
         "tracks are pre-downloaded for gapless, lag-free playback.</i>"
     ),
     "controls": (
@@ -63,7 +63,7 @@ async def start_private(client: Client, message: Message):
         f"I'm <b>{me.first_name}</b> — a fast, high-quality music player for "
         "Telegram voice chats.\n\n"
         "✨ <b>Features</b>\n"
-        "├ 🎧 Studio-grade audio (96 kHz stereo)\n"
+        "├ 🎧 Hi-fi audio (48 kHz stereo)\n"
         "├ 📺 Up to 4K video streaming\n"
         "├ ⚡ Pre-downloaded, gapless playback\n"
         "├ 📜 Queue, loop, shuffle, seek & volume\n"
