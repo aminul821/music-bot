@@ -9,6 +9,11 @@ def fmt_time(seconds: int) -> str:
     return f"{h}:{m:02d}:{s:02d}" if h else f"{m:02d}:{s:02d}"
 
 
+def fmt_pos(seconds: int) -> str:
+    """Playback position: like fmt_time, but 0 is 00:00 instead of LIVE."""
+    return fmt_time(max(int(seconds), 0)) if seconds > 0 else "00:00"
+
+
 def parse_time(text: str) -> int | None:
     """Parse '90', '1:30' or '1:02:30' into seconds."""
     try:

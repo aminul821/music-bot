@@ -5,6 +5,8 @@ import logging
 from pyrogram.enums import ChatMemberStatus
 from pyrogram.errors import (
     ChannelPrivate,
+    FloodWait,
+    MessageNotModified,
     ChatAdminRequired,
     InviteHashExpired,
     InviteRequestSent,
@@ -21,7 +23,7 @@ from MusicBot.core import queue, youtube
 from MusicBot.core.clients import assistant, bot, call
 from MusicBot.core.queue import Track
 from MusicBot.utils.buttons import player_markup
-from MusicBot.utils.formatters import esc, fmt_time
+from MusicBot.utils.formatters import esc, fmt_pos, fmt_time, progress_bar
 
 LOGGER = logging.getLogger("MusicBot.player")
 
@@ -90,6 +92,10 @@ async def _unban_assistant(chat_id: int) -> bool:
         return True
     except Exception:
         return False
+
+
+def forget_chat(chat_id: int) -> None:
+    _joined.discard(chat_id)
 
 
 async def ensure_assistant(chat_id: int) -> None:
@@ -298,7 +304,7 @@ async def stop(chat_id: int, notify: bool = False) -> None:
     except (NotInCallError, Exception):
         pass
     if notify:
-        await _safe_send(chat_id, "✅ Queue finished. Left the voice chat.")
+        await _safe_send(chat_id, "✅ <b>ǫᴜᴇᴜᴇ ғɪɴɪsʜᴇᴅ</b>\n👋 <i>left the voice chat — send</i> <code>/play</code> <i>for more</i>")
 
 
 async def pause(chat_id: int) -> bool:
@@ -341,30 +347,70 @@ async def set_volume(chat_id: int, volume: int) -> int:
 # ---------------------------------------------------------------- UI
 
 
+def _card(track: Track, state) -> str:
+    kind = "📺 ᴠɪᴅᴇᴏ" if track.video else "🎧 ᴀᴜᴅɪᴏ"
+    title = f'<a href="{track.link}">{esc(track.title, 50)}</a>' if track.link else f"<b>{esc(track.title, 50)}</b>"
+    quality = QUALITY_LABEL + (f" • {VIDEO_QUALITY.name.split('_')[-1]}" if track.video else "")
+    upcoming = state.tracks[1] if len(state.tracks) > 1 else None
+    lines = [
+        f"<b>✦ ɴᴏᴡ sᴛʀᴇᴀᴍɪɴɢ ✦</b>  {kind}",
+        "",
+        f"<blockquote>🎵 {title}</blockquote>",
+        f"⏳ <b>ᴅᴜʀᴀᴛɪᴏɴ</b> ➜ <code>{fmt_time(track.duration)}</code>",
+        f"💎 <b>ǫᴜᴀʟɪᴛʏ</b> ➜ <code>{quality}</code>",
+        f"👤 <b>ʀᴇǫᴜᴇsᴛᴇᴅ</b> ➜ {track.requested_by}",
+    ]
+    if upcoming:
+        lines.append(f"⏭ <b>ᴜᴘ ɴᴇxᴛ</b> ➜ <i>{esc(upcoming.title, 40)}</i>")
+        if len(state.tracks) > 2:
+            lines.append(f"📜 <b>ɪɴ ǫᴜᴇᴜᴇ</b> ➜ <code>{len(state.tracks) - 1}</code> tracks")
+    return "\n".join(lines)
+
+
+def _progress(track: Track) -> str:
+    if track.duration <= 0:
+        return "🔴 ʟɪᴠᴇ sᴛʀᴇᴀᴍ"
+    return f"{fmt_pos(track.elapsed())} {progress_bar(track.elapsed(), track.duration, 10)} {fmt_time(track.duration)}"
+
+
+def current_markup(chat_id: int):
+    state = queue.peek(chat_id)
+    if not state or not state.current:
+        return None
+    return player_markup(state.paused, state.loop > 0, _progress(state.current))
+
+
+async def _progress_loop(chat_id: int, msg: Message, track: Track) -> None:
+    """Keep the progress bar on the now-playing card moving."""
+    while True:
+        await asyncio.sleep(10)
+        state = queue.peek(chat_id)
+        if not state or state.current is not track or _np_messages.get(chat_id) is not msg:
+            return
+        if state.paused:
+            continue
+        try:
+            await msg.edit_reply_markup(current_markup(chat_id))
+        except FloodWait as e:
+            await asyncio.sleep(e.value + 1)
+        except MessageNotModified:
+            pass
+        except Exception:
+            return
+
+
 async def send_now_playing(chat_id: int) -> None:
     state = queue.get(chat_id)
     track = state.current
     if not track:
         return
-    upcoming = state.tracks[1] if len(state.tracks) > 1 else None
-    kind = "📺 Video" if track.video else "🎧 Audio"
-    title = f'<a href="{track.link}">{esc(track.title)}</a>' if track.link else f"<b>{esc(track.title)}</b>"
-    caption = (
-        f"<b>▶️ Now Streaming</b>  •  {kind}\n\n"
-        f"🎵 {title}\n"
-        f"⏱ <b>Duration:</b> <code>{fmt_time(track.duration)}</code>\n"
-        f"💎 <b>Quality:</b> <code>{QUALITY_LABEL}"
-        f"{' • ' + VIDEO_QUALITY.name.split('_')[-1] if track.video else ''}</code>\n"
-        f"👤 <b>Requested by:</b> {track.requested_by}"
-    )
-    if upcoming:
-        caption += f"\n⏭ <b>Up next:</b> {esc(upcoming.title, 45)}"
 
     old = _np_messages.pop(chat_id, None)
     if old:
         await _safe_delete(old)
 
-    markup = player_markup(paused=False, loop=state.loop > 0)
+    caption = _card(track, state)
+    markup = current_markup(chat_id)
     msg = None
     if track.thumb:
         try:
@@ -375,6 +421,8 @@ async def send_now_playing(chat_id: int) -> None:
         msg = await _safe_send(chat_id, caption, reply_markup=markup)
     if msg:
         _np_messages[chat_id] = msg
+        if track.duration > 0:
+            asyncio.create_task(_progress_loop(chat_id, msg, track))
 
 
 async def _safe_send(chat_id: int, text: str, **kwargs) -> Message | None:

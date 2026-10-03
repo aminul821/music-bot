@@ -22,7 +22,9 @@ and an **assistant account (Pyrogram string session)** that joins the voice chat
 |---|---|
 | `/play <name/link>` | Play audio (or reply to an audio file) |
 | `/vplay <name/link>` | Play video (or reply to a video file) |
-| `/playforce <name>` | Skip the current track and play this one now |
+| `/stream <url>` | Play any direct audio link, radio or m3u8 |
+| `/vstream <url>` | Play any direct video link or live stream |
+| `/playforce`, `/vplayforce` | Skip the current track and play this one now (admins) |
 | `/pause` / `/resume` | Pause or resume |
 | `/skip` | Next track |
 | `/stop` / `/end` | Clear the queue and leave the voice chat |
@@ -34,11 +36,22 @@ and an **assistant account (Pyrogram string session)** that joins the voice chat
 | `/np` | Now playing, with a progress bar |
 | `/remove <pos>` / `/clear` | Remove one upcoming track, or all of them |
 | `/ping` | Latency and uptime |
-| `/reload` | Refresh the cached admin list |
+| `/approve` / `/unapprove` | Let a user control playback (admins; reply or `@user`) |
+| `/approved`, `/unapproveall` | List or clear approved users (admins) |
+| `/adminmode on\|off` | Only admins and approved users control playback (admins) |
+| `/playmode everyone\|admins` | Who can add songs (admins) |
+| `/settings` | Settings panel with toggle buttons (admins) |
+| `/userbotjoin`, `/userbotleave` | Add or remove the assistant (admins) |
+| `/reload` | Refresh the cached admin list (admins) |
 | `/stats` | Active chats (sudo only) |
 | `/setcookies` | Reply to a `cookies.txt` to update YouTube cookies (sudo only) |
 
-Commands work with the `/`, `!` and `.` prefixes.
+Commands work with the `/`, `!`, `.` and `;` prefixes (e.g. `;approve`, `.skip`).
+
+**Who can do what:** sudo users can do everything. Chat admins with *Manage Video
+Chats* can use the admin commands. Approved users can use the playback controls even
+when admin mode is on. Everyone else can `/play` (unless play mode is `admins`) and
+view `/queue` and `/np`. Settings and approvals are saved in `data/db.json`.
 
 ## ⚙️ Setup
 
@@ -85,6 +98,26 @@ Commands work with the `/`, `!` and `.` prefixes.
 > **Tip:** 4K video uses a lot of CPU and bandwidth. On a small VPS, use `VIDEO_QUALITY=720`.
 
 > ⚠️ Never share your `STRING_SESSION`. It gives full access to the assistant account.
+
+## 🔁 Run 24/7 (without keeping the terminal open)
+
+If you start the bot with `python -m MusicBot`, it stops when you close the terminal.
+Install it as a service instead:
+
+```bash
+cd ~/music-bot
+bash deploy/install-service.sh
+```
+
+The bot then keeps running after you log out, restarts automatically if it crashes,
+and starts again when the server reboots.
+
+| Task | Command |
+|---|---|
+| Live logs | `sudo journalctl -u musicbot -f` |
+| Restart (e.g. after `git pull`) | `sudo systemctl restart musicbot` |
+| Stop / start | `sudo systemctl stop musicbot` / `sudo systemctl start musicbot` |
+| Status | `sudo systemctl status musicbot` |
 
 ## 🛠 Troubleshooting
 

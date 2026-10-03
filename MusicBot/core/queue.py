@@ -74,6 +74,11 @@ def get(chat_id: int) -> ChatState:
     return state
 
 
+def peek(chat_id: int) -> ChatState | None:
+    """The chat's state without creating one."""
+    return _states.get(chat_id)
+
+
 def active_chats() -> list[int]:
     return [cid for cid, s in _states.items() if s.tracks]
 

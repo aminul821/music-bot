@@ -1,6 +1,6 @@
 from pyrogram import filters
 
-PREFIXES = ["/", "!", "."]
+PREFIXES = ["/", "!", ".", ";"]
 
 
 def command(*names: str):

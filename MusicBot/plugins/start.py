@@ -3,54 +3,85 @@ from pyrogram.enums import ChatType
 from pyrogram.types import CallbackQuery, Message
 
 import config
-from MusicBot.utils.decorators import callback_is_admin
+from MusicBot.utils.decorators import callback_can_control
 from MusicBot.utils.buttons import back_markup, help_markup, start_markup
 from MusicBot.utils.filters import command
 
 HELP_MAIN = (
-    "<b>📖 Help Menu</b>\n\n"
-    "Pick a category below to see its commands.\n"
-    "Commands work with <code>/</code>, <code>!</code> or <code>.</code> prefixes."
+    "╭─❰ 📖 <b>ʜᴇʟᴘ ᴍᴇɴᴜ</b> ❱\n"
+    "│ Pick a category below ✨\n"
+    "│\n"
+    "│ Prefixes ➜ <code>/</code> <code>!</code> <code>.</code> <code>;</code>\n"
+    "│ e.g. <code>;play</code>, <code>.skip</code>, <code>;approve</code>\n"
+    "╰─ 🎧 <i>made for smooth voice chat music</i>"
 )
 
 HELP_PAGES = {
     "play": (
-        "<b>🎵 Play Commands</b>\n\n"
-        "• <code>/play</code> <i>song name | YouTube link | playlist</i> — stream audio\n"
-        "• <code>/vplay</code> <i>song name | YouTube link</i> — stream video\n"
-        "• Reply <code>/play</code> to an audio/voice file — play it\n"
-        "• Reply <code>/vplay</code> to a video file — play it\n"
-        "• <code>/playforce</code> <i>query</i> — skip current & play now (admins)\n\n"
-        "<i>Audio is streamed in hi-fi quality (48 kHz stereo); "
-        "tracks are pre-downloaded for gapless, lag-free playback.</i>"
+        "╭─❰ 🎵 <b>ᴘʟᴀʏ</b> ❱\n"
+        "│ <code>/play</code> <i>name | link | playlist</i>\n"
+        "│    ➜ stream audio from YouTube\n"
+        "│ <code>/play</code> <i>(reply to audio/voice)</i>\n"
+        "│    ➜ play a Telegram file\n"
+        "│ <code>/stream</code> <i>direct link / radio / m3u8</i>\n"
+        "│    ➜ play any audio link\n"
+        "│ <code>/playforce</code> <i>name</i> 🛡\n"
+        "│    ➜ skip current & play now\n"
+        "╰─ ⚡ <i>tracks pre-download for gapless playback</i>"
+    ),
+    "video": (
+        "╭─❰ 📺 <b>ᴠɪᴅᴇᴏ</b> ❱\n"
+        "│ <code>/vplay</code> <i>name | YouTube link</i>\n"
+        "│    ➜ stream video in the voice chat\n"
+        "│ <code>/vplay</code> <i>(reply to a video)</i>\n"
+        "│    ➜ play a Telegram video file\n"
+        "│ <code>/vstream</code> <i>direct link / m3u8 / live</i>\n"
+        "│    ➜ stream any video link or live TV\n"
+        "│ <code>/vplayforce</code> <i>name</i> 🛡\n"
+        "│    ➜ skip current & play video now\n"
+        "╰─ 💎 <i>up to 4K, set with VIDEO_QUALITY</i>"
     ),
     "controls": (
-        "<b>🎛 Playback Controls</b> <i>(admins)</i>\n\n"
-        "• <code>/pause</code> — pause playback\n"
-        "• <code>/resume</code> — resume playback\n"
-        "• <code>/skip</code> — next track\n"
-        "• <code>/stop</code> or <code>/end</code> — clear queue & leave\n"
-        "• <code>/seek</code> <i>1:30</i> — jump to a position\n"
-        "• <code>/volume</code> <i>1-200</i> — set volume\n"
-        "• <code>/loop</code> <i>[1-10 | off]</i> — repeat current track"
+        "╭─❰ 🎛 <b>ᴄᴏɴᴛʀᴏʟs</b> ❱ <i>(admins & approved)</i>\n"
+        "│ <code>/pause</code> • <code>/resume</code>\n"
+        "│ <code>/skip</code> ➜ next track\n"
+        "│ <code>/stop</code> ➜ clear queue & leave\n"
+        "│ <code>/seek 1:30</code> • <code>/seek +30</code> • <code>/seek -10</code>\n"
+        "│ <code>/volume 1-200</code>\n"
+        "│ <code>/loop [1-10 | off]</code>\n"
+        "╰─ 🎚 <i>or just use the buttons on the player</i>"
     ),
     "queue": (
-        "<b>📜 Queue</b>\n\n"
-        "• <code>/queue</code> — show the queue\n"
-        "• <code>/np</code> — now playing with progress\n"
-        "• <code>/shuffle</code> — shuffle upcoming tracks (admins)\n"
-        "• <code>/remove</code> <i>position</i> — remove a track (admins)\n"
-        "• <code>/clear</code> — clear upcoming tracks (admins)"
+        "╭─❰ 📜 <b>ǫᴜᴇᴜᴇ</b> ❱\n"
+        "│ <code>/queue</code> ➜ show the queue\n"
+        "│ <code>/np</code> ➜ now playing + progress\n"
+        "│ <code>/shuffle</code> ➜ shuffle upcoming\n"
+        "│ <code>/remove 2</code> ➜ remove a track\n"
+        "╰─ <code>/clear</code> ➜ clear upcoming tracks"
+    ),
+    "admin": (
+        "╭─❰ 🛡 <b>ᴀᴅᴍɪɴ ᴏɴʟʏ</b> ❱\n"
+        "│ <code>/approve</code> <i>(reply | @user)</i>\n"
+        "│    ➜ let a user control playback\n"
+        "│ <code>/unapprove</code> • <code>/approved</code> • <code>/unapproveall</code>\n"
+        "│ <code>/adminmode on|off</code>\n"
+        "│    ➜ who can pause/skip/stop\n"
+        "│ <code>/playmode everyone|admins</code>\n"
+        "│    ➜ who can add songs\n"
+        "│ <code>/settings</code> ➜ toggle panel\n"
+        "│ <code>/userbotjoin</code> • <code>/userbotleave</code>\n"
+        "╰─ <code>/reload</code> ➜ refresh admin list"
     ),
     "other": (
-        "<b>⚙️ Other</b>\n\n"
-        "• <code>/ping</code> — bot latency & status\n"
-        "• <code>/reload</code> — refresh admin list\n"
-        "• <code>/stats</code> — active voice chats (sudo)\n"
-        "• <code>/setcookies</code> — reply to cookies.txt to fix YouTube blocks (sudo)\n\n"
-        "<b>Setup:</b> add me as admin with <i>Manage Video Chats</i>, "
-        "<i>Invite Users</i> and <i>Delete Messages</i>. "
-        "My assistant joins automatically."
+        "╭─❰ ⚙️ <b>ᴏᴛʜᴇʀ</b> ❱\n"
+        "│ <code>/ping</code> ➜ latency & uptime\n"
+        "│ <code>/stats</code> ➜ active chats (sudo)\n"
+        "│ <code>/setcookies</code> ➜ fix YouTube blocks (sudo)\n"
+        "│\n"
+        "│ <b>sᴇᴛᴜᴘ:</b> make me admin with\n"
+        "│ <i>Manage Video Chats, Invite Users,</i>\n"
+        "│ <i>Delete Messages</i>\n"
+        "╰─ 🤖 my assistant joins automatically"
     ),
 }
 
@@ -59,16 +90,18 @@ HELP_PAGES = {
 async def start_private(client: Client, message: Message):
     me = client.me
     text = (
-        f"<b>👋 Hey {message.from_user.mention}!</b>\n\n"
-        f"I'm <b>{me.first_name}</b> — a fast, high-quality music player for "
-        "Telegram voice chats.\n\n"
-        "✨ <b>Features</b>\n"
-        "├ 🎧 Hi-fi audio (48 kHz stereo)\n"
-        "├ 📺 Up to 4K video streaming\n"
-        "├ ⚡ Pre-downloaded, gapless playback\n"
-        "├ 📜 Queue, loop, shuffle, seek & volume\n"
-        "└ 🎛 Inline control panel\n\n"
-        "Add me to a group and send <code>/play song name</code> to begin!"
+        f"<b>ʜᴇʏ {message.from_user.mention} 👋</b>\n\n"
+        f"<blockquote>🎧 ɪ'ᴍ <b>{me.first_name}</b>\n"
+        "ᴀ ғᴀsᴛ & ʜɪ-ғɪ ᴍᴜsɪᴄ ᴘʟᴀʏᴇʀ ғᴏʀ ᴛᴇʟᴇɢʀᴀᴍ ᴠᴏɪᴄᴇ ᴄʜᴀᴛs</blockquote>\n\n"
+        "╭─❰ ✨ <b>ғᴇᴀᴛᴜʀᴇs</b> ❱\n"
+        "│ 🎵 YouTube songs, links & playlists\n"
+        "│ 📺 Video streaming up to 4K\n"
+        "│ 🔗 Direct links, radio & live streams\n"
+        "│ ⚡ Pre-buffered, gapless playback\n"
+        "│ 🎛 Live player with progress bar\n"
+        "│ 🛡 Admin mode & approved users\n"
+        "╰─ 📜 Queue • loop • shuffle • seek • volume\n\n"
+        "<i>Add me to a group and send</i> <code>/play song name</code> 🚀"
     )
     markup = start_markup(me.username)
     if config.START_IMG:
@@ -82,7 +115,10 @@ async def start_private(client: Client, message: Message):
 @Client.on_message(command("start") & filters.group)
 async def start_group(client: Client, message: Message):
     await message.reply_text(
-        "🎶 <b>I'm alive and ready to play!</b>\nUse <code>/play song name</code> or /help."
+        "🎶 <b>ɪ'ᴍ ᴀʟɪᴠᴇ & ʀᴇᴀᴅʏ!</b>\n"
+        "<code>/play song name</code> ➜ audio\n"
+        "<code>/vplay song name</code> ➜ video\n"
+        "<code>/help</code> ➜ all commands"
     )
 
 
@@ -111,7 +147,7 @@ async def help_cb(client: Client, query: CallbackQuery):
 @Client.on_callback_query(filters.regex(r"^close$"))
 async def close_cb(client: Client, query: CallbackQuery):
     if query.message.chat.type != ChatType.PRIVATE:
-        if not await callback_is_admin(query):
+        if not await callback_can_control(query):
             return
     try:
         await query.message.delete()

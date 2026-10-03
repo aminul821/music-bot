@@ -7,7 +7,6 @@ from pyrogram.types import Message
 import config
 from MusicBot.core import queue
 from MusicBot.core.clients import call
-from MusicBot.utils.decorators import get_admins, group_only
 from MusicBot.utils.filters import command
 
 BOOT_TIME = time.time()
@@ -37,13 +36,6 @@ async def ping_cmd(client: Client, message: Message):
         f"🎧 <b>Active chats:</b> <code>{len(queue.active_chats())}</code>\n"
         f"⏱ <b>Uptime:</b> <code>{_uptime()}</code>"
     )
-
-
-@Client.on_message(command("reload", "admincache"))
-@group_only
-async def reload_cmd(client: Client, message: Message):
-    await get_admins(message.chat.id, refresh=True)
-    await message.reply_text("✅ <b>Admin list refreshed.</b>")
 
 
 @Client.on_message(command("stats") & filters.user(list(config.SUDO_USERS) or [0]))
