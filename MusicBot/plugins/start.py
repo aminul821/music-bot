@@ -82,7 +82,7 @@ HELP_PAGES = {
         "│\n"
         "│ <b>sᴇᴛᴜᴘ:</b> make me admin with\n"
         "│ <i>Manage Video Chats, Invite Users,</i>\n"
-        "│ <i>Delete Messages</i>\n"
+        "│ <i>Delete Messages, Add New Admins</i>\n"
         "╰─ 🔒 private bot for the Mad Family group"
     ),
 }

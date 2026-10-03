@@ -13,7 +13,10 @@ from pyrogram.errors import (
     UserAlreadyParticipant,
     UserBannedInChannel,
 )
-from pyrogram.types import Message
+from pyrogram.raw.functions.channels import GetFullChannel
+from pyrogram.raw.functions.messages import GetFullChat
+from pyrogram.raw.types import InputChannel, InputPeerChannel, InputPeerChat
+from pyrogram.types import ChatPrivileges, Message
 from pytgcalls import filters as fl
 from pytgcalls.exceptions import NotInCallError
 from pytgcalls.types import AudioQuality, ChatUpdate, MediaStream, StreamEnded, VideoQuality
@@ -49,6 +52,16 @@ QUALITY_LABEL = f"{AUDIO_QUALITY.value[0] // 1000} kHz {'Stereo' if AUDIO_QUALIT
 _np_messages: dict[int, Message] = {}
 # Chats where the assistant is known to be a member.
 _joined: set[int] = set()
+# Chats where we're currently connected to the voice chat.
+_in_call: set[int] = set()
+
+VC_RIGHTS_HELP = (
+    "🎙 <b>ᴠᴏɪᴄᴇ ᴄʜᴀᴛ ɪs ᴏғғ</b> and my assistant isn't allowed to start it.\n"
+    "Fix one of these:\n"
+    "• give me (the bot) the <b>Add New Admins</b> right, so I can promote my assistant automatically\n"
+    "• or make the assistant an admin with <b>Manage Video Chats</b>\n"
+    "• or just start the voice chat yourself and send /play again"
+)
 
 
 class PlayerError(Exception):
@@ -147,6 +160,69 @@ async def ensure_assistant(chat_id: int) -> None:
     _joined.add(chat_id)
 
 
+async def promote_assistant(chat_id: int) -> bool:
+    """Let the bot make the assistant a voice-chat admin (needs 'Add New Admins')."""
+    me = assistant.me
+    try:
+        await bot.promote_chat_member(
+            chat_id,
+            me.username or me.id,
+            ChatPrivileges(can_manage_chat=True, can_manage_video_chats=True, can_invite_users=True),
+            title="🎧 Music",
+        )
+        LOGGER.info("Promoted assistant in %s", chat_id)
+        return True
+    except Exception as e:
+        LOGGER.warning("Couldn't promote assistant in %s: %s", chat_id, e)
+        return False
+
+
+async def _vc_is_off(chat_id: int) -> bool:
+    try:
+        peer = await assistant.resolve_peer(chat_id)
+        if isinstance(peer, InputPeerChannel):
+            full = await assistant.invoke(
+                GetFullChannel(channel=InputChannel(channel_id=peer.channel_id, access_hash=peer.access_hash))
+            )
+        elif isinstance(peer, InputPeerChat):
+            full = await assistant.invoke(GetFullChat(chat_id=peer.chat_id))
+        else:
+            return False
+        return full.full_chat.call is None
+    except Exception:
+        return False
+
+
+def _needs_rights(error: Exception) -> bool:
+    if isinstance(error, ChatAdminRequired):
+        return True
+    text = f"{type(error).__name__} {error}".upper()
+    return any(k in text for k in ("ADMIN_REQUIRED", "GROUPCALL_FORBIDDEN", "CHAT_FORBIDDEN", "NOACTIVEGROUPCALL"))
+
+
+async def _join_call(chat_id: int, stream: MediaStream, rebuild) -> None:
+    """Join/stream into the voice chat, starting it (and getting rights) if needed."""
+    vc_was_off = chat_id not in _in_call and await _vc_is_off(chat_id)
+    try:
+        await call.play(chat_id, stream)
+    except Exception as e:
+        if not _needs_rights(e):
+            raise
+        LOGGER.info("Assistant lacks voice chat rights in %s (%s), promoting", chat_id, e)
+        if not await promote_assistant(chat_id):
+            raise PlayerError(VC_RIGHTS_HELP) from e
+        await asyncio.sleep(1.5)
+        try:
+            await call.play(chat_id, rebuild())
+        except Exception as e2:
+            if _needs_rights(e2):
+                raise PlayerError(VC_RIGHTS_HELP) from e2
+            raise
+    _in_call.add(chat_id)
+    if vc_was_off:
+        await _safe_send(chat_id, "🎙 <b>ᴠᴏɪᴄᴇ ᴄʜᴀᴛ ᴡᴀs ᴏғғ</b> — started it for you! Come join 💞")
+
+
 # ---------------------------------------------------------------- streams
 
 
@@ -187,6 +263,13 @@ async def _check_can_speak(chat_id: int) -> None:
     me = assistant.me
     for p in participants:
         if p.user_id == me.id and p.muted_by_admin:
+            if await promote_assistant(chat_id):
+                try:
+                    await call.unmute(chat_id)
+                except Exception:
+                    pass
+                await _safe_send(chat_id, "🔊 My assistant was muted, so I made it a voice chat admin. Music is on! 🎶")
+                return
             await _safe_send(
                 chat_id,
                 f"🔇 <b>My assistant {me.mention} is muted in the voice chat</b>, so nobody can hear the music.\n"
@@ -201,7 +284,7 @@ async def _play_current(chat_id: int, offset: int = 0, announce: bool = True) ->
     track = state.current
     path = await _prepare(track)
     LOGGER.info("Playing %r in %s from %s", track.title, chat_id, path)
-    await call.play(chat_id, _stream(path, track.video, offset))
+    await _join_call(chat_id, _stream(path, track.video, offset), lambda: _stream(path, track.video, offset))
     track.mark_started(offset)
     try:
         await call.unmute(chat_id)
@@ -231,7 +314,8 @@ async def _advance(chat_id: int, error_chat_notice: bool = True) -> None:
             state.loop = 0
             LOGGER.warning("Failed to play %s in %s: %s", failed.title, chat_id, e)
             if error_chat_notice:
-                detail = str(e) if str(e) == youtube.BOT_CHECK_HELP else f"<code>{esc(str(e), 200)}</code>"
+                plain = isinstance(e, PlayerError) or str(e) == youtube.BOT_CHECK_HELP
+                detail = str(e) if plain else f"<code>{esc(str(e), 200)}</code>"
                 await _safe_send(chat_id, f"⚠️ Couldn't play <b>{esc(failed.title)}</b>, skipping.\n{detail}")
     await stop(chat_id, notify=True)
 
@@ -296,6 +380,7 @@ async def on_stream_end(chat_id: int) -> None:
 
 async def stop(chat_id: int, notify: bool = False) -> None:
     queue.clear(chat_id)
+    _in_call.discard(chat_id)
     old = _np_messages.pop(chat_id, None)
     if old:
         await _safe_delete(old)
@@ -453,6 +538,7 @@ async def _stream_end_handler(_, update: StreamEnded):
 async def _left_call_handler(_, update: ChatUpdate):
     if update.status & (ChatUpdate.Status.KICKED | ChatUpdate.Status.LEFT_GROUP):
         _joined.discard(update.chat_id)
+    _in_call.discard(update.chat_id)
     queue.clear(update.chat_id)
     old = _np_messages.pop(update.chat_id, None)
     if old:

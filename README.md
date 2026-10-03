@@ -15,6 +15,8 @@ joins the voice chat.
 - 📜 Queue, loop, shuffle, seek, volume, remove and clear
 - 🎛 Inline control panel (pause/resume, ±10s, skip, stop, loop, volume, queue)
 - 🤖 The assistant joins your group automatically
+- 🎙 Starts the voice chat if it's off. If the assistant lacks rights, the bot promotes it
+  to voice chat admin (give the bot **Add New Admins** for this)
 - 🔒 Admin-only controls (needs *Manage Video Chats*), plus sudo users
 
 ## 📋 Commands
@@ -77,7 +79,8 @@ view `/queue` and `/np`. Settings and approvals are saved in `data/db.json`.
    docker run -d --env-file .env --name music-bot music-bot
    ```
 6. Add the bot to the Mad Family group as an admin with **Manage Video Chats**,
-   **Invite Users** and **Delete Messages**. Then send `/play song name`.
+   **Invite Users**, **Delete Messages** and **Add New Admins**. The last one lets it
+   promote the assistant so the assistant can start the voice chat. Then send `/play song name`.
 7. **Lock it to your group:** send `/id` in the group. Put that number in `.env` as
    `ALLOWED_CHATS=-100...` and restart. In any other group, the bot will say it's
    private and leave.
