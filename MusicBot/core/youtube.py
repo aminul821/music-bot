@@ -30,8 +30,37 @@ VIDEO_HEIGHTS = {"4k": 2160, "2k": 1440, "1080": 1080, "720": 720, "480": 480, "
 os.makedirs(config.DOWNLOAD_DIR, exist_ok=True)
 
 
+BOT_CHECK_HELP = (
+    "🤖 YouTube is blocking this server (\"Sign in to confirm you're not a bot\").\n"
+    "Fix: export YouTube <b>cookies.txt</b> from a logged-in browser, send it to me and "
+    "reply to it with <code>/setcookies</code> (owner/sudo only). "
+    "A residential <code>YT_PROXY</code> also works."
+)
+
+
 class YouTubeError(Exception):
     pass
+
+
+class _QuietLogger:
+    """Keep yt-dlp from printing to the console; we log failures ourselves."""
+
+    def debug(self, msg):
+        pass
+
+    def info(self, msg):
+        pass
+
+    def warning(self, msg):
+        pass
+
+    def error(self, msg):
+        pass
+
+
+def _is_bot_check(error: Exception | None) -> bool:
+    text = str(error or "")
+    return "Sign in to confirm" in text or "not a bot" in text
 
 
 def _base_opts(clients: list[str] | None = None) -> dict:
@@ -49,7 +78,10 @@ def _base_opts(clients: list[str] | None = None) -> dict:
         # YouTube needs a JS runtime to unlock most formats (deno is preferred).
         "js_runtimes": {"deno": {}, "node": {}, "bun": {}},
         "remote_components": ["ejs:github"],
+        "logger": _QuietLogger(),
     }
+    if config.YT_PROXY:
+        opts["proxy"] = config.YT_PROXY
     if clients:
         opts["extractor_args"] = {"youtube": {"player_client": clients}}
     if config.COOKIES_FILE and os.path.isfile(config.COOKIES_FILE):
@@ -113,6 +145,8 @@ async def search(query: str) -> list[dict]:
     except YouTubeError:
         raise
     except Exception as e:  # yt-dlp raises many different error types
+        if _is_bot_check(e):
+            raise YouTubeError(BOT_CHECK_HELP) from e
         raise YouTubeError(str(e).splitlines()[0][:300]) from e
 
 
@@ -159,9 +193,11 @@ def _download(link: str, vidid: str, video: bool) -> str:
                 os.remove(leftover)
             except OSError:
                 pass
+    if _is_bot_check(last_error):
+        raise YouTubeError(BOT_CHECK_HELP) from last_error
     raise YouTubeError(
         "YouTube blocked the download (HTTP 403). Install Deno, update yt-dlp, "
-        "or set COOKIES_FILE — see README › Troubleshooting."
+        "or add cookies with /setcookies — see README › Troubleshooting."
     ) from last_error
 
 
@@ -177,6 +213,8 @@ def _live_url(link: str, video: bool) -> str:
                 return info["url"]
         except Exception as e:
             last_error = e
+    if _is_bot_check(last_error):
+        raise YouTubeError(BOT_CHECK_HELP) from last_error
     raise YouTubeError("Could not get live stream URL.") from last_error
 
 

@@ -39,7 +39,9 @@ VIDEO_QUALITY = os.getenv("VIDEO_QUALITY", "1080").lower()
 ADMIN_ONLY = _bool(os.getenv("ADMIN_ONLY", "true"))
 
 # Path to a Netscape-format cookies.txt for yt-dlp (helps with YouTube rate limits).
-COOKIES_FILE = os.getenv("COOKIES_FILE", "")
+COOKIES_FILE = os.getenv("COOKIES_FILE", "") or ("cookies.txt" if os.path.isfile("cookies.txt") else "")
+# Optional proxy for YouTube, e.g. http://user:pass@host:port or socks5://host:port
+YT_PROXY = os.getenv("YT_PROXY", "")
 # Optional comma-separated yt-dlp YouTube player clients to try first, e.g. "tv_simply,web_safari".
 YT_CLIENTS = [c.strip() for c in os.getenv("YT_CLIENTS", "").split(",") if c.strip()]
 DOWNLOAD_DIR = os.getenv("DOWNLOAD_DIR", "downloads")

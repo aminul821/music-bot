@@ -145,7 +145,10 @@ async def _play(client: Client, message: Message, video: bool, force: bool = Fal
             disable_web_page_preview=True,
         )
     except (player.PlayerError, youtube.YouTubeError) as e:
-        await status.edit_text(str(e) if isinstance(e, player.PlayerError) else f"❌ <b>YouTube error:</b> <code>{esc(str(e), 300)}</code>")
+        if isinstance(e, player.PlayerError) or str(e) == youtube.BOT_CHECK_HELP:
+            await status.edit_text(str(e))
+        else:
+            await status.edit_text(f"❌ <b>YouTube error:</b> <code>{esc(str(e), 300)}</code>")
     except Exception as e:
         await status.edit_text(f"❌ <b>Failed to play:</b> <code>{esc(f'{type(e).__name__}: {e}', 300)}</code>")
 

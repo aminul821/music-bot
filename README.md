@@ -36,6 +36,7 @@ and an **assistant account (Pyrogram string session)** that joins the voice chat
 | `/ping` | Latency and uptime |
 | `/reload` | Refresh the cached admin list |
 | `/stats` | Active chats (sudo only) |
+| `/setcookies` | Reply to a `cookies.txt` to update YouTube cookies (sudo only) |
 
 Commands work with the `/`, `!` and `.` prefixes.
 
@@ -77,6 +78,7 @@ Commands work with the `/`, `!` and `.` prefixes.
 | `QUEUE_LIMIT` | `50` | Maximum tracks in one queue |
 | `ADMIN_ONLY` | `true` | Only admins can control playback |
 | `COOKIES_FILE` | — | YouTube `cookies.txt` (helps if YouTube blocks your server) |
+| `YT_PROXY` | — | Proxy for YouTube requests (residential works best) |
 | `YT_CLIENTS` | — | yt-dlp player clients to try first, e.g. `tv_simply,web_safari` |
 | `SUPPORT_CHAT`, `UPDATES_CHANNEL`, `START_IMG` | — | Optional links and image for `/start` |
 
@@ -87,22 +89,27 @@ Commands work with the `/`, `!` and `.` prefixes.
 
 ## 🛠 Troubleshooting
 
-**`ERROR: unable to download video data: HTTP Error 403: Forbidden`**
+**`Sign in to confirm you're not a bot`** or **`HTTP Error 403: Forbidden`**
 
-YouTube is refusing downloads from your server. This is common on cloud/VPS IPs
-(Azure, AWS, GCP…). Try these in order:
+YouTube blocks most cloud/VPS IP addresses (Azure, AWS, GCP…). You need one of these:
 
-1. **Install Deno** (most common fix):
-   `curl -fsSL https://deno.land/install.sh | sh`, then check that `deno --version` works.
-2. **Update yt-dlp**: `pip install -U "yt-dlp[default]"`. YouTube changes often.
-3. **Use cookies**: in a browser that's logged into YouTube (use a spare account),
-   export `cookies.txt` with the *"Get cookies.txt LOCALLY"* extension. Upload it to
-   the server and set `COOKIES_FILE=cookies.txt`.
-4. **PO token provider** (for heavily blocked IPs): run
-   `docker run -d -p 4416:4416 brainicism/bgutil-ytdlp-pot-provider`
-   and `pip install bgutil-ytdlp-pot-provider`.
+1. **Cookies (easiest).** In a browser, log into YouTube with a **spare account**.
+   Export `cookies.txt` with the *"Get cookies.txt LOCALLY"* extension.
+   Then either:
+   - send the file to the bot and reply to it with `/setcookies` (owner/sudo only), or
+   - upload it to the bot folder as `cookies.txt`. It's picked up automatically, or you
+     can point `COOKIES_FILE` at it.
 
-The bot already retries blocked downloads with several YouTube clients automatically.
+   Cookies expire from time to time. If the error comes back, export them again.
+2. **PO token provider** (works well together with cookies):
+   ```bash
+   docker run -d --restart unless-stopped -p 4416:4416 brainicism/bgutil-ytdlp-pot-provider
+   pip install -U bgutil-ytdlp-pot-provider
+   ```
+3. **Residential proxy**: set `YT_PROXY=http://user:pass@host:port`.
+
+Also make sure **Deno** is installed (`deno --version`) and yt-dlp is up to date:
+`pip install -U "yt-dlp[default]"`.
 
 ## 🧱 Project structure
 

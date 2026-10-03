@@ -43,6 +43,13 @@ async def main() -> None:
             "No JavaScript runtime found: YouTube downloads may fail with HTTP 403. "
             "Install Deno: curl -fsSL https://deno.land/install.sh | sh"
         )
+    if config.COOKIES_FILE and os.path.isfile(config.COOKIES_FILE):
+        LOGGER.info("Using YouTube cookies from %s", config.COOKIES_FILE)
+    else:
+        LOGGER.warning(
+            "No YouTube cookies set: cloud servers usually get \"Sign in to confirm you're not a bot\". "
+            "Send cookies.txt to the bot and reply /setcookies, or set COOKIES_FILE."
+        )
     if not shutil.which("ffmpeg"):
         LOGGER.error("ffmpeg is not installed: sudo apt install ffmpeg")
     await bot.start()

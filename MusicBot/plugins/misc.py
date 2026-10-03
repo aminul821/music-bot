@@ -1,3 +1,4 @@
+import os
 import time
 
 from pyrogram import Client, filters
@@ -53,3 +54,32 @@ async def stats_cmd(client: Client, message: Message):
         cur = queue.get(cid).current
         lines.append(f"• <code>{cid}</code> — {cur.title[:40] if cur else '—'}")
     await message.reply_text("\n".join(lines))
+
+
+@Client.on_message(command("setcookies") & filters.user(list(config.SUDO_USERS) or [0]))
+async def setcookies_cmd(client: Client, message: Message):
+    doc = message.reply_to_message.document if message.reply_to_message else None
+    if not doc:
+        return await message.reply_text(
+            "<b>Usage:</b> send your YouTube <code>cookies.txt</code> (Netscape format) and reply to it "
+            "with <code>/setcookies</code>.\n\n"
+            "Export it from a browser logged into YouTube with the "
+            "<i>Get cookies.txt LOCALLY</i> extension. Use a spare account."
+        )
+    if doc.file_size and doc.file_size > 5 * 1024 * 1024:
+        return await message.reply_text("❌ That file is too large to be a cookies.txt.")
+    tmp = await message.reply_to_message.download(file_name=os.path.abspath("cookies.txt.new"))
+    with open(tmp, encoding="utf-8", errors="ignore") as f:
+        content = f.read()
+    if "youtube.com" not in content or "\t" not in content:
+        os.remove(tmp)
+        return await message.reply_text("❌ That doesn't look like a Netscape-format YouTube cookies.txt.")
+    target = os.path.abspath(config.COOKIES_FILE or "cookies.txt")
+    os.replace(tmp, target)
+    os.chmod(target, 0o600)
+    config.COOKIES_FILE = target
+    try:
+        await message.reply_to_message.delete()  # cookies are account credentials
+    except Exception:
+        pass
+    await message.reply_text("✅ <b>YouTube cookies saved.</b> Try <code>/play</code> again.")

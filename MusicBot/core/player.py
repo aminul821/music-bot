@@ -200,11 +200,8 @@ async def _advance(chat_id: int, error_chat_notice: bool = True) -> None:
             state.loop = 0
             LOGGER.warning("Failed to play %s in %s: %s", failed.title, chat_id, e)
             if error_chat_notice:
-                await _safe_send(
-                    chat_id,
-                    f"⚠️ Couldn't play <b>{esc(failed.title)}</b>, skipping.\n"
-                    f"<code>{esc(str(e), 200)}</code>",
-                )
+                detail = str(e) if str(e) == youtube.BOT_CHECK_HELP else f"<code>{esc(str(e), 200)}</code>"
+                await _safe_send(chat_id, f"⚠️ Couldn't play <b>{esc(failed.title)}</b>, skipping.\n{detail}")
     await stop(chat_id, notify=True)
 
 
