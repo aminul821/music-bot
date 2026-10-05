@@ -18,6 +18,8 @@ joins the voice chat.
 - 🎙 Starts the voice chat if it's off. If the assistant lacks rights, the bot promotes it
   to voice chat admin (give the bot **Add New Admins** for this)
 - 🔒 Admin-only controls (needs *Manage Video Chats*), plus sudo users
+- 🌿 **Touch Grass mode**: outing plans, photo-verified "I went outside" streaks and
+  sunset-aware nudges, powered by an **open-weight model running on your own server**
 
 ## 📋 Commands
 
@@ -48,6 +50,10 @@ joins the voice chat.
 | `/settings` | Settings panel with toggle buttons (admins) |
 | `/userbotjoin`, `/userbotleave` | Add or remove the assistant (admins) |
 | `/reload` | Refresh the cached admin list (admins) |
+| `/touchgrass [place]` | Best time and spot to go outside today (or reply to a 📍 location) |
+| `/touched` | Photo caption or reply: the local model checks it's outdoors and adds a day to your streak |
+| `/grassboard` | The group's touch-grass streaks |
+| `/sethome <place>` | The group's home spot for plans and nudges (admins; or reply to a 📍 location) |
 | `/stats` | Active chats (sudo only) |
 | `/setcookies` | Reply to a `cookies.txt` to update YouTube cookies (sudo only) |
 
@@ -57,6 +63,44 @@ Commands work with the `/`, `!`, `.` and `;` prefixes (e.g. `;approve`, `.skip`)
 Chats* can use the admin commands. Approved users can use the playback controls even
 when admin mode is on. Everyone else can `/play` (unless play mode is `admins`) and
 view `/queue` and `/np`. Settings and approvals are saved in `data/db.json`.
+
+## 🌿 Touch Grass mode
+
+A music bot is great at keeping people in a voice chat for hours. Touch Grass mode
+pushes the other way and gets the Mad Family outside.
+
+- **`/touchgrass`** checks the [Open-Meteo](https://open-meteo.com) forecast, finds the
+  best 2-hour window before sunset, and looks up real parks, gardens, trails and
+  viewpoints nearby from [OpenStreetMap](https://www.openstreetmap.org). The local model
+  turns those facts into a short plan with one small outdoor mission. It may only use
+  places from the map, so it can't invent a park. People tap **🙋 I'm in** to join.
+- **`/touched`**: send a photo from outside. A local **vision** model checks that it was
+  really taken outdoors (screenshots and photos of screens don't count), says what it
+  spotted, and adds a day to your streak. **`/grassboard`** shows the leaderboard.
+- **Nudges**: after `GRASS_NUDGE_HOURS` (default 3) of non-stop voice chat, the bot tells
+  everyone how much daylight is left and offers to plan a walk. It stays quiet after
+  dark and during storms.
+
+**Everything AI runs locally with [Ollama](https://ollama.com).** Photos and plans go to
+your own Ollama server and nowhere else. Weather and map lookups need no API key.
+
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+ollama pull gemma3:4b      # open-weight, handles text + photos, runs on a laptop CPU
+```
+
+| Variable | Default | Description |
+|---|---|---|
+| `OLLAMA_URL` | `http://localhost:11434` | Your Ollama server |
+| `GRASS_MODEL` | `gemma3:4b` | Any Ollama model. Use a vision model (`gemma3`, `qwen2.5vl`, `llava`) for `/touched` |
+| `GRASS_NUDGE_HOURS` | `3` | Hours of non-stop voice chat before a nudge (`0` = off) |
+| `GRASS_RADIUS` | `3000` | How far to look for parks and trails, in metres |
+
+If Ollama is down, `/touchgrass` still works and posts a plain template plan. `/touched`
+says it can't check photos right now. It never counts a photo it hasn't checked.
+
+> With Docker, run Ollama next to the bot and set `OLLAMA_URL=http://host.docker.internal:11434`
+> (add `--add-host=host.docker.internal:host-gateway` on Linux).
 
 ## ⚙️ Setup
 
@@ -174,8 +218,10 @@ MusicBot/
 │   ├── clients.py     # bot, assistant and PyTgCalls clients
 │   ├── player.py      # voice chat engine: join, stream, queue advance
 │   ├── queue.py       # per-chat queue state
-│   └── youtube.py     # yt-dlp search and download
-├── plugins/           # commands: start/help, play, controls, misc
+│   ├── youtube.py     # yt-dlp search and download
+│   ├── llm.py         # local open-weight model via Ollama (text + vision)
+│   └── outdoors.py    # Open-Meteo weather + OpenStreetMap green spots
+├── plugins/           # commands: start/help, play, controls, grass (Touch Grass), misc
 └── utils/             # buttons, formatters, admin checks
 config.py              # environment configuration
 generate_session.py    # string session generator

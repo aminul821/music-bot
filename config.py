@@ -56,3 +56,13 @@ DOWNLOAD_DIR = os.path.abspath(os.getenv("DOWNLOAD_DIR", "downloads"))
 SUPPORT_CHAT = os.getenv("SUPPORT_CHAT", "")
 UPDATES_CHANNEL = os.getenv("UPDATES_CHANNEL", "")
 START_IMG = os.getenv("START_IMG", "")
+
+# --- Touch Grass (open-weight AI, runs on your own machine via Ollama) ------
+# Ollama server that hosts the open-weight model. Photos and plans never leave it.
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434").rstrip("/")
+# Any Ollama model. A vision model (gemma3, qwen2.5vl, llava…) also checks /touched photos.
+GRASS_MODEL = os.getenv("GRASS_MODEL", "gemma3:4b")
+# Nudge the group to go outside after this many hours of non-stop voice chat (0 = off).
+GRASS_NUDGE_HOURS = float(os.getenv("GRASS_NUDGE_HOURS", "3"))
+# How far to look for parks, trails and viewpoints, in metres.
+GRASS_RADIUS = int(os.getenv("GRASS_RADIUS", "3000"))
