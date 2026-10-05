@@ -54,8 +54,7 @@ def help_markup() -> InlineKeyboardMarkup:
         [
             [Btn("🎵 ᴘʟᴀʏ", callback_data="help:play"), Btn("📺 ᴠɪᴅᴇᴏ", callback_data="help:video")],
             [Btn("🎛 ᴄᴏɴᴛʀᴏʟs", callback_data="help:controls"), Btn("📜 ǫᴜᴇᴜᴇ", callback_data="help:queue")],
-            [Btn("🛡 ᴀᴅᴍɪɴ", callback_data="help:admin"), Btn("🌿 ᴛᴏᴜᴄʜ ɢʀᴀss", callback_data="help:grass")],
-            [Btn("⚙️ ᴏᴛʜᴇʀ", callback_data="help:other")],
+            [Btn("🛡 ᴀᴅᴍɪɴ", callback_data="help:admin"), Btn("⚙️ ᴏᴛʜᴇʀ", callback_data="help:other")],
             [Btn("✖ ᴄʟᴏsᴇ", callback_data="close")],
         ]
     )

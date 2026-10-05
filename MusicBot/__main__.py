@@ -9,7 +9,6 @@ import config
 from MusicBot import LOGGER
 from MusicBot.core import player  # noqa: F401  (registers voice chat handlers)
 from MusicBot.core.clients import assistant, bot, call
-from MusicBot.plugins.grass import start_nudger
 
 COMMANDS = [
     BotCommand("play", "🎵 Play audio (name / link / reply)"),
@@ -30,9 +29,6 @@ COMMANDS = [
     BotCommand("unapprove", "🚫 Unapprove a user (admins)"),
     BotCommand("approved", "📋 Approved users (admins)"),
     BotCommand("settings", "⚙️ Chat settings (admins)"),
-    BotCommand("touchgrass", "🌿 Plan time outside (local AI)"),
-    BotCommand("touched", "📸 Log a photo from outside"),
-    BotCommand("grassboard", "🔥 Touch-grass streaks"),
     BotCommand("ping", "🏓 Bot status"),
     BotCommand("help", "📖 Help"),
 ]
@@ -79,7 +75,6 @@ async def main() -> None:
     else:
         LOGGER.warning("ALLOWED_CHATS is empty: the bot works in any group. Send /id in your group and set it.")
     LOGGER.info("Bot @%s started with assistant @%s", bot.me.username, assistant.me.username or assistant.me.id)
-    start_nudger()
     if config.OWNER_ID:
         try:
             await bot.send_message(config.OWNER_ID, f"✅ <b>{config.BOT_NAME}</b> is online! 🎶")

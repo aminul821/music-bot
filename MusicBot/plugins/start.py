@@ -72,16 +72,6 @@ HELP_PAGES = {
         "│ <code>/userbotjoin</code> • <code>/userbotleave</code>\n"
         "╰─ <code>/reload</code> ➜ refresh admin list"
     ),
-    "grass": (
-        "╭─❰ 🌿 <b>ᴛᴏᴜᴄʜ ɢʀᴀss</b> ❱\n"
-        "│ <code>/touchgrass</code> <i>[place | reply to 📍]</i>\n"
-        "│    ➜ best time & spot to go outside today\n"
-        "│ <code>/touched</code> <i>(photo caption or reply)</i>\n"
-        "│    ➜ prove you went out, grow your streak\n"
-        "│ <code>/grassboard</code> ➜ group streaks\n"
-        "│ <code>/sethome</code> <i>place</i> 🛡 ➜ group's home spot\n"
-        "╰─ 🧠 <i>open-weight model, runs on our own server</i>"
-    ),
     "other": (
         "╭─❰ ⚙️ <b>ᴏᴛʜᴇʀ</b> ❱\n"
         "│ <code>/ping</code> ➜ latency & uptime\n"
@@ -112,8 +102,7 @@ async def start_private(client: Client, message: Message):
         "│ ⚡ Pre-buffered, gapless playback\n"
         "│ 🎛 Live player with progress bar\n"
         "│ 🛡 Admin mode & approved users\n"
-        "│ 📜 Queue • loop • shuffle • seek • volume\n"
-        "╰─ 🌿 Touch Grass: outing plans & streaks (local AI)\n\n"
+        "╰─ 📜 Queue • loop • shuffle • seek • volume\n\n"
         "<i>Come to the Mad Family voice chat and send</i> <code>/play song name</code> 🚀"
     )
     markup = start_markup(me.username)

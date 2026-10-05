@@ -110,36 +110,3 @@ def clear_approved(chat_id: int) -> int:
     users = _chat(chat_id).pop("approved", {})
     _save()
     return len(users)
-
-
-# ---------------------------------------------------------------- touch grass
-
-
-def grass_home(chat_id: int) -> dict | None:
-    """{"name", "lat", "lon"} the group goes outside from, set with /sethome."""
-    return _data.get(str(chat_id), {}).get("grass_home")
-
-
-def set_grass_home(chat_id: int, name: str, lat: float, lon: float) -> None:
-    _chat(chat_id)["grass_home"] = {"name": name, "lat": lat, "lon": lon}
-    _save()
-
-
-def grass_board(chat_id: int) -> dict[str, dict]:
-    """{user_id: {"name", "last", "streak", "best", "total"}}"""
-    return _data.get(str(chat_id), {}).get("grass", {})
-
-
-def log_grass(chat_id: int, user_id: int, name: str, today: str, yesterday: str) -> tuple[dict, bool]:
-    """Count one verified day outside. Returns (the user's record, whether today was new)."""
-    users = _chat(chat_id).setdefault("grass", {})
-    rec = users.setdefault(str(user_id), {"name": name, "last": "", "streak": 0, "best": 0, "total": 0})
-    rec["name"] = name
-    if rec["last"] == today:
-        return rec, False
-    rec["streak"] = rec["streak"] + 1 if rec["last"] == yesterday else 1
-    rec["best"] = max(rec["best"], rec["streak"])
-    rec["total"] += 1
-    rec["last"] = today
-    _save()
-    return rec, True
