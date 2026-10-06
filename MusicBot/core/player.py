@@ -263,7 +263,8 @@ async def _prepare(track: Track) -> str:
     if track.path:
         return track.path
     if track.vidid and track.duration == 0:  # live stream: resolve a fresh URL
-        return await youtube.download(track.source, track.vidid, track.video, live=True)
+        track.path = await youtube.download(track.source, track.vidid, track.video, live=True)
+        return track.path
     _prefetch(track)
     track.path = await track.download
     return track.path
@@ -374,15 +375,30 @@ async def enqueue(chat_id: int, track: Track) -> int:
             raise PlayerError(f"📛 Queue is full ({config.QUEUE_LIMIT} tracks).")
         state.tracks.append(track)
         position = len(state.tracks) - 1
-        if position == 0:
-            try:
-                await _play_current(chat_id)
-            except Exception:
-                queue.clear(chat_id)
-                raise
-        elif position == 1:
+        if position == 1:
             _prefetch(track)
-        return position
+        if position != 0:
+            return position
+
+    # First track: download WITHOUT holding the lock, so /skip, /stop etc. stay responsive.
+    try:
+        await _prepare(track)
+    except Exception:
+        async with state.lock:
+            if track in state.tracks:
+                state.tracks.remove(track)
+            if not state.tracks:
+                queue.clear(chat_id)
+        raise
+    async with state.lock:
+        if state.current is not track:
+            return 0  # stopped or skipped while downloading
+        try:
+            await _play_current(chat_id)
+        except Exception:
+            queue.clear(chat_id)
+            raise
+    return 0
 
 
 async def skip(chat_id: int) -> Track | None:
@@ -514,7 +530,8 @@ def current_markup(chat_id: int):
 async def _progress_loop(chat_id: int, msg: Message, track: Track) -> None:
     """Keep the progress bar on the now-playing card moving."""
     while True:
-        await asyncio.sleep(10)
+        # Telegram allows a bot ~20 messages/edits per minute per group; keep most of that for replies.
+        await asyncio.sleep(30)
         state = queue.peek(chat_id)
         if not state or state.current is not track or _np_messages.get(chat_id) is not msg:
             return
@@ -523,7 +540,8 @@ async def _progress_loop(chat_id: int, msg: Message, track: Track) -> None:
         try:
             await msg.edit_reply_markup(current_markup(chat_id))
         except FloodWait as e:
-            await asyncio.sleep(e.value + 1)
+            LOGGER.info("Progress update rate-limited in %s for %ss", chat_id, e.value)
+            await asyncio.sleep(e.value + 30)
         except MessageNotModified:
             pass
         except Exception:

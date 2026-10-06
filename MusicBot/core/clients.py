@@ -10,6 +10,8 @@ bot = Client(
     bot_token=config.BOT_TOKEN,
     in_memory=True,
     plugins=dict(root="MusicBot.plugins"),
+    # Each /play may wait on a download; enough workers keeps other commands instant.
+    workers=32,
 )
 
 assistant = Client(
