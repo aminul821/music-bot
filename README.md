@@ -99,7 +99,8 @@ view `/queue` and `/np`. Settings and approvals are saved in `data/db.json`.
 | `GROUP_LINK` | — | Mad Family invite link, shown as a button on `/start` |
 | `OWNER_ID`, `SUDO_USERS` | — | User IDs with full control |
 | `AUDIO_QUALITY` | `high` | `high` (48 kHz, recommended), `studio` (96 kHz), `medium` or `low` |
-| `VIDEO_QUALITY` | `1080` | `4k`, `2k`, `1080`, `720`, `480` or `360` |
+| `VIDEO_QUALITY` | `720` | `4k`, `2k`, `1080`, `720`, `480` or `360` |
+| `VIDEO_FPS` | `30` | Video frame rate; `60` needs about twice the CPU |
 | `DURATION_LIMIT` | `180` | Longest allowed track, in minutes (`0` = no limit) |
 | `QUEUE_LIMIT` | `50` | Maximum tracks in one queue |
 | `ADMIN_ONLY` | `true` | Only admins can control playback |
@@ -108,7 +109,9 @@ view `/queue` and `/np`. Settings and approvals are saved in `data/db.json`.
 | `YT_CLIENTS` | — | yt-dlp player clients to try first, e.g. `tv_simply,web_safari` |
 | `SUPPORT_CHAT`, `UPDATES_CHANNEL`, `START_IMG` | — | Optional links and image for `/start` |
 
-> **Tip:** 4K video uses a lot of CPU and bandwidth. On a small VPS, use `VIDEO_QUALITY=720`.
+> **Tip:** video is encoded live on your server. On a small VPS keep `VIDEO_QUALITY=720` and
+> `VIDEO_FPS=30`. If video lags or the logs show `socket.send() raised exception`, the server
+> is overloaded, so lower them further (for example to `480`).
 
 > ⚠️ Never share your `STRING_SESSION`. It gives full access to the assistant account.
 

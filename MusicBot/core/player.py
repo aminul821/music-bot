@@ -20,6 +20,7 @@ from pyrogram.raw.types import InputChannel, InputPeerChannel, InputPeerChat
 from pyrogram.types import ChatPrivileges, Message
 from pytgcalls import filters as fl
 from pytgcalls.types import AudioQuality, ChatUpdate, MediaStream, StreamEnded, VideoQuality
+from pytgcalls.types.raw import VideoParameters
 
 import config
 from MusicBot.core import queue, youtube
@@ -37,14 +38,17 @@ AUDIO_QUALITY = {
     "low": AudioQuality.LOW,
 }.get(config.AUDIO_QUALITY, AudioQuality.HIGH)
 
-VIDEO_QUALITY = {
+_VQ = {
     "4k": VideoQuality.UHD_4K,
     "2k": VideoQuality.QHD_2K,
     "1080": VideoQuality.FHD_1080p,
     "720": VideoQuality.HD_720p,
     "480": VideoQuality.SD_480p,
     "360": VideoQuality.SD_360p,
-}.get(config.VIDEO_QUALITY, VideoQuality.FHD_1080p)
+}.get(config.VIDEO_QUALITY, VideoQuality.HD_720p)
+_W, _H, _MAX_FPS = _VQ.value
+VIDEO_PARAMS = VideoParameters(_W, _H, max(1, min(config.VIDEO_FPS, _MAX_FPS)), adjust_by_height=False)
+VIDEO_LABEL = f"{_H}p{VIDEO_PARAMS.frame_rate}"
 
 QUALITY_LABEL = f"{AUDIO_QUALITY.value[0] // 1000} kHz {'Stereo' if AUDIO_QUALITY.value[1] == 2 else 'Mono'}"
 
@@ -269,7 +273,7 @@ def _stream(path: str, video: bool, offset: int = 0) -> MediaStream:
     return MediaStream(
         path,
         audio_parameters=AUDIO_QUALITY,
-        video_parameters=VIDEO_QUALITY,
+        video_parameters=VIDEO_PARAMS,
         video_flags=MediaStream.Flags.AUTO_DETECT if video else MediaStream.Flags.IGNORE,
         ffmpeg_parameters=f"-ss {offset}" if offset else None,
     )
@@ -309,7 +313,8 @@ async def _end_watchdog(chat_id: int, track: Track) -> None:
         state = queue.peek(chat_id)
         if not state or state.current is not track or track.started_at != started:
             return
-        if not state.paused and track.elapsed() > track.duration + 20:
+        # Generous grace period: a busy server streams slower than real time.
+        if not state.paused and track.elapsed() > track.duration + max(60, track.duration * 0.15):
             LOGGER.warning("No stream-end event for %r in %s, advancing", track.title, chat_id)
             await on_stream_end(chat_id, expected=track)
             return
@@ -475,7 +480,7 @@ async def set_volume(chat_id: int, volume: int) -> int:
 def _card(track: Track, state) -> str:
     kind = "📺 ᴠɪᴅᴇᴏ" if track.video else "🎧 ᴀᴜᴅɪᴏ"
     title = f'<a href="{track.link}">{esc(track.title, 50)}</a>' if track.link else f"<b>{esc(track.title, 50)}</b>"
-    quality = QUALITY_LABEL + (f" • {VIDEO_QUALITY.name.split('_')[-1]}" if track.video else "")
+    quality = QUALITY_LABEL + (f" • {VIDEO_LABEL}" if track.video else "")
     upcoming = state.tracks[1] if len(state.tracks) > 1 else None
     lines = [
         f"<b>✦ ɴᴏᴡ sᴛʀᴇᴀᴍɪɴɢ ✦</b>  {kind}",

@@ -39,8 +39,10 @@ QUEUE_LIMIT = int(os.getenv("QUEUE_LIMIT", "50"))
 
 # Audio quality: high (48 kHz stereo, Telegram's native rate — best), studio (96 kHz), medium, low.
 AUDIO_QUALITY = os.getenv("AUDIO_QUALITY", "high").lower()
-# Video quality for /vplay: 4k, 2k, 1080, 720, 480, 360.
-VIDEO_QUALITY = os.getenv("VIDEO_QUALITY", "1080").lower()
+# Video quality for /vplay: 4k, 2k, 1080, 720, 480, 360. Higher needs a much stronger server.
+VIDEO_QUALITY = os.getenv("VIDEO_QUALITY", "720").lower()
+# Video frame rate (frames per second). 30 is smooth; 60 needs about twice the CPU.
+VIDEO_FPS = int(os.getenv("VIDEO_FPS", "30"))
 
 # Only chat admins (and sudo users) can control playback when enabled.
 ADMIN_ONLY = _bool(os.getenv("ADMIN_ONLY", "true"))

@@ -10,6 +10,8 @@ logging.basicConfig(
 )
 for noisy in ("pyrogram", "pytgcalls", "ntgcalls"):
     logging.getLogger(noisy).setLevel(logging.WARNING)
+# "socket.send() raised exception" spam during reconnects
+logging.getLogger("asyncio").setLevel(logging.ERROR)
 
 LOGGER = logging.getLogger("MusicBot")
 

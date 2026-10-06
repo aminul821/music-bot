@@ -151,7 +151,7 @@ async def search(query: str) -> list[dict]:
 
 
 def _video_height() -> int:
-    return VIDEO_HEIGHTS.get(config.VIDEO_QUALITY, 1080)
+    return VIDEO_HEIGHTS.get(config.VIDEO_QUALITY, 720)
 
 
 def _download(link: str, vidid: str, video: bool) -> str:
