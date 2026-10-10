@@ -1,3 +1,4 @@
+import asyncio
 import glob
 import os
 import shutil
@@ -7,7 +8,7 @@ from pyrogram.types import BotCommand
 
 import config
 from MusicBot import LOGGER
-from MusicBot.core import player  # noqa: F401  (registers voice chat handlers)
+from MusicBot.core import player  # also registers voice chat handlers
 from MusicBot.core.clients import assistant, bot, call
 
 COMMANDS = [
@@ -80,9 +81,20 @@ async def main() -> None:
             await bot.send_message(config.OWNER_ID, f"✅ <b>{config.BOT_NAME}</b> is online! 🎶")
         except Exception:
             pass
+    janitor = asyncio.create_task(player.janitor())
     await idle()
-    await bot.stop()
-    await assistant.stop()
+
+    # Shut down with time limits so a stuck call can't block a restart.
+    LOGGER.info("Shutting down…")
+    janitor.cancel()
+    await player.shutdown()
+    for client in (bot, assistant):
+        try:
+            await asyncio.wait_for(client.stop(), timeout=10)
+        except Exception as e:
+            LOGGER.warning("Stopping %s: %s", client.name, e or type(e).__name__)
+    LOGGER.info("Bye!")
+    os._exit(0)  # don't wait on leftover native threads (ntgcalls / ffmpeg)
 
 
 if __name__ == "__main__":

@@ -35,6 +35,8 @@ Environment=PYTHONUNBUFFERED=1
 ExecStart=$PYTHON -m MusicBot
 Restart=always
 RestartSec=5
+TimeoutStopSec=30
+KillMode=mixed
 
 [Install]
 WantedBy=multi-user.target

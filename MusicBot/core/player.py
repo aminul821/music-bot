@@ -490,6 +490,29 @@ async def set_volume(chat_id: int, volume: int) -> int:
     return volume
 
 
+async def janitor() -> None:
+    """Every 2 minutes, leave voice chats that have nothing queued (safety net for missed events)."""
+    while True:
+        await asyncio.sleep(120)
+        for chat_id in list(_in_call):
+            state = queue.peek(chat_id)
+            if state is None or not state.tracks:
+                LOGGER.warning("Janitor: nothing queued in %s but still in the call, leaving", chat_id)
+                try:
+                    await asyncio.wait_for(stop(chat_id), timeout=30)
+                except Exception as e:
+                    LOGGER.warning("Janitor couldn't leave %s: %s", chat_id, e)
+
+
+async def shutdown() -> None:
+    """Leave all voice chats quickly so a restart doesn't hang."""
+    for chat_id in list(_in_call):
+        try:
+            await asyncio.wait_for(stop(chat_id), timeout=5)
+        except Exception:
+            pass
+
+
 # ---------------------------------------------------------------- UI
 
 
@@ -599,10 +622,16 @@ async def _stream_end_handler(_, update: StreamEnded):
 
 @call.on_update(fl.chat_update(ChatUpdate.Status.LEFT_CALL))
 async def _left_call_handler(_, update: ChatUpdate):
+    LOGGER.info("Voice chat ended for the assistant in %s (%s)", update.chat_id, update.status)
     if update.status & (ChatUpdate.Status.KICKED | ChatUpdate.Status.LEFT_GROUP):
         _joined.discard(update.chat_id)
     _in_call.discard(update.chat_id)
     queue.clear(update.chat_id)
+    # The VC is gone, but our local stream (ffmpeg) may still be running: stop it.
+    try:
+        await asyncio.wait_for(call.leave_call(update.chat_id), timeout=10)
+    except Exception:
+        pass
     old = _np_messages.pop(update.chat_id, None)
     if old:
         await _safe_delete(old)
